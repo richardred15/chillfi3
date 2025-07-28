@@ -11,6 +11,13 @@ jest.mock('../config', () => ({
     auth: {
         jwtSecret: 'test_secret',
         tokenExpiry: '7d'
+    },
+    database: {
+        host: 'localhost',
+        port: 3306,
+        user: 'test',
+        password: 'test',
+        database: 'test_db'
     }
 }));
 

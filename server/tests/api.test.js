@@ -2,10 +2,27 @@
  * API Endpoint Tests
  */
 const request = require('supertest');
+
+// Mock config to avoid HTTPS file reading
+jest.mock('../config', () => ({
+    server: {
+        httpsKey: null,
+        httpsCert: null,
+        httpsCa: null
+    },
+    client: {
+        url: 'http://localhost'
+    }
+}));
+
 const { app } = require('../server');
 
 // Mock database
-jest.mock('../database');
+jest.mock('../database', () => ({
+    init: jest.fn().mockResolvedValue({}),
+    query: jest.fn(),
+    cleanup: jest.fn()
+}));
 const database = require('../database');
 
 describe('API Endpoints', () => {

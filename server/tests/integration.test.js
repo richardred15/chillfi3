@@ -2,11 +2,29 @@
  * Integration Tests
  */
 // const request = require('supertest');
+
+// Mock config to avoid HTTPS file reading
+jest.mock('../config', () => ({
+    server: {
+        httpsKey: null,
+        httpsCert: null,
+        httpsCa: null,
+        port: 3005
+    },
+    client: {
+        url: 'http://localhost'
+    }
+}));
+
 const { app, io } = require('../server');
 const Client = require('socket.io-client');
 
 // Mock database
-jest.mock('../database');
+jest.mock('../database', () => ({
+    init: jest.fn().mockResolvedValue({}),
+    query: jest.fn(),
+    cleanup: jest.fn()
+}));
 const database = require('../database');
 
 describe('Integration Tests', () => {
