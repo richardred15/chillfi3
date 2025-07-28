@@ -127,7 +127,7 @@ async function runSchemaMigrations() {
 // Get current database schema
 async function getCurrentDatabaseSchema() {
     const [tables] = await pool.execute(
-        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?",
+        'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?',
         [dbConfig.database]
     );
     
@@ -136,7 +136,7 @@ async function getCurrentDatabaseSchema() {
     for (const table of tables) {
         const tableName = table.TABLE_NAME;
         const [columns] = await pool.execute(
-            "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+            'SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
             [dbConfig.database, tableName]
         );
         

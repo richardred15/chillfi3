@@ -385,7 +385,7 @@ function handleSocket(socket, _io) {
     });
 
     // Get user theme
-    socket.on('user:getTheme', async (data) => {
+    socket.on('user:getTheme', async (_data) => {
         try {
             if (!socket.authenticated) {
                 return socket.emit('user:getTheme', { 
