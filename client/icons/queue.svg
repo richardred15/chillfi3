@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 6H20" stroke="url(#queueGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 12H20" stroke="url(#queueGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 18H20" stroke="url(#queueGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="queueGradient" x1="4" y1="6" x2="20" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8C67EF"/>
+      <stop offset="1" stop-color="#4F9EFF"/>
+    </linearGradient>
+  </defs>
+</svg>

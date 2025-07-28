@@ -1,0 +1,99 @@
+/* Context Menu Styles */
+.context-menu {
+    position: absolute;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-xs);
+    min-width: 180px;
+    box-shadow: var(--box-shadow);
+    z-index: 1000;
+    user-select: none;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+    position: relative;
+}
+
+.context-menu-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.context-menu-item img {
+    margin-right: var(--spacing-sm);
+    opacity: 0.7;
+}
+
+.context-menu-text {
+    flex: 1;
+    font-size: var(--font-size-small);
+}
+
+.context-menu-arrow {
+    margin-left: var(--spacing-sm);
+    font-size: var(--font-size-small);
+    opacity: 0.5;
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: var(--glass-border);
+    margin: var(--spacing-xs) 0;
+}
+
+/* Submenu styles */
+.context-menu-submenu {
+    position: relative;
+}
+
+.context-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-xs);
+    min-width: 200px;
+    box-shadow: var(--box-shadow);
+    display: none;
+    z-index: 1001;
+}
+
+.context-menu-submenu:hover .context-submenu {
+    display: block;
+}
+
+.playlist-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.playlist-empty {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+
+
+.section-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.song-item-empty {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}

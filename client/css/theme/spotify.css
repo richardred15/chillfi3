@@ -1,0 +1,8 @@
+/* Spotify Theme - Green */
+:root {
+    --accent-primary: #1db954;
+    --accent-secondary: #1ed760;
+    --accent-primary-rgb: 29, 185, 84;
+    --accent-secondary-rgb: 30, 215, 96;
+    --theme-name: 'spotify';
+}

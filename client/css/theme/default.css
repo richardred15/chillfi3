@@ -1,0 +1,8 @@
+/* Default Theme - Amazon Q Colors */
+:root {
+    --accent-primary: #8c67ef;
+    --accent-secondary: #4f9eff;
+    --accent-primary-rgb: 140, 103, 239;
+    --accent-secondary-rgb: 79, 158, 255;
+    --theme-name: 'default';
+}

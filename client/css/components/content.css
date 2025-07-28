@@ -1,0 +1,19 @@
+/* Content Area Component */
+.content {
+    flex: 1;
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    background-color: var(--bg-secondary);
+}
+
+/* Responsive Styles */
+@media (max-width: 576px) {
+    .content {
+        padding: var(--spacing-lg);
+        padding-top: calc(60px + var(--spacing-lg));
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        height: calc(100vh - 60px - var(--player-height-mobile));
+    }
+}

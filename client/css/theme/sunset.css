@@ -1,0 +1,8 @@
+/* Sunset Theme - Warm Orange */
+:root {
+    --accent-primary: #ff6b35;
+    --accent-secondary: #f7931e;
+    --accent-primary-rgb: 255, 107, 53;
+    --accent-secondary-rgb: 247, 147, 30;
+    --theme-name: 'sunset';
+}

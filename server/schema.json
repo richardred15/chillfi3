@@ -1,0 +1,434 @@
+{
+  "version": "1.0.0",
+  "database": "musiclib",
+  "tables": {
+    "users": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "username": {
+          "type": "VARCHAR(50)",
+          "notNull": true,
+          "unique": true
+        },
+        "display_name": {
+          "type": "VARCHAR(100)",
+          "nullable": true
+        },
+        "password": {
+          "type": "VARCHAR(255)",
+          "nullable": true
+        },
+        "bio": {
+          "type": "TEXT",
+          "nullable": true
+        },
+        "profile_image_url": {
+          "type": "VARCHAR(255)",
+          "nullable": true
+        },
+        "created_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "last_login": {
+          "type": "TIMESTAMP",
+          "nullable": true
+        },
+        "is_admin": {
+          "type": "BOOLEAN",
+          "default": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_users_username",
+          "columns": ["username"],
+          "unique": true
+        }
+      ]
+    },
+    "sessions": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "user_id": {
+          "type": "INT",
+          "notNull": true
+        },
+        "token": {
+          "type": "VARCHAR(255)",
+          "notNull": true
+        },
+        "token_type": {
+          "type": "ENUM('auth', 'reset')",
+          "default": "'auth'"
+        },
+        "expires_at": {
+          "type": "TIMESTAMP",
+          "notNull": true
+        },
+        "created_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "user_id",
+          "references": "users(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_sessions_token",
+          "columns": ["token"]
+        },
+        {
+          "name": "idx_sessions_user",
+          "columns": ["user_id"]
+        }
+      ]
+    },
+    "artists": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "name": {
+          "type": "VARCHAR(100)",
+          "notNull": true
+        },
+        "bio": {
+          "type": "TEXT",
+          "nullable": true
+        },
+        "image_url": {
+          "type": "VARCHAR(255)",
+          "nullable": true
+        },
+        "created_by": {
+          "type": "INT",
+          "nullable": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "created_by",
+          "references": "users(id)",
+          "onDelete": "SET NULL"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_artists_name",
+          "columns": ["name"]
+        },
+        {
+          "name": "idx_artists_created_by",
+          "columns": ["created_by"]
+        }
+      ]
+    },
+    "albums": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "title": {
+          "type": "VARCHAR(100)",
+          "notNull": true
+        },
+        "artist_id": {
+          "type": "INT",
+          "nullable": true
+        },
+        "release_year": {
+          "type": "INT",
+          "nullable": true
+        },
+        "cover_art_url": {
+          "type": "VARCHAR(255)",
+          "nullable": true
+        },
+        "created_by": {
+          "type": "INT",
+          "nullable": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "artist_id",
+          "references": "artists(id)",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "created_by",
+          "references": "users(id)",
+          "onDelete": "SET NULL"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_albums_title",
+          "columns": ["title"]
+        },
+        {
+          "name": "idx_albums_artist",
+          "columns": ["artist_id"]
+        },
+        {
+          "name": "idx_albums_created_by",
+          "columns": ["created_by"]
+        }
+      ]
+    },
+    "songs": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "title": {
+          "type": "VARCHAR(100)",
+          "notNull": true
+        },
+        "artist_id": {
+          "type": "INT",
+          "nullable": true
+        },
+        "album_id": {
+          "type": "INT",
+          "nullable": true
+        },
+        "file_path": {
+          "type": "VARCHAR(255)",
+          "notNull": true
+        },
+        "duration": {
+          "type": "INT",
+          "nullable": true
+        },
+        "track_number": {
+          "type": "INT",
+          "nullable": true
+        },
+        "genre": {
+          "type": "VARCHAR(50)",
+          "nullable": true
+        },
+        "year": {
+          "type": "INT",
+          "nullable": true
+        },
+        "bitrate": {
+          "type": "INT",
+          "nullable": true
+        },
+        "sample_rate": {
+          "type": "INT",
+          "nullable": true
+        },
+        "uploaded_by": {
+          "type": "INT",
+          "notNull": true
+        },
+        "uploaded_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "play_count": {
+          "type": "INT",
+          "default": 0
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "artist_id",
+          "references": "artists(id)",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "album_id",
+          "references": "albums(id)",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "uploaded_by",
+          "references": "users(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_songs_title",
+          "columns": ["title"]
+        },
+        {
+          "name": "idx_songs_artist",
+          "columns": ["artist_id"]
+        },
+        {
+          "name": "idx_songs_album",
+          "columns": ["album_id"]
+        },
+        {
+          "name": "idx_songs_uploaded_by",
+          "columns": ["uploaded_by"]
+        },
+        {
+          "name": "idx_songs_genre",
+          "columns": ["genre"]
+        }
+      ]
+    },
+    "playlists": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "name": {
+          "type": "VARCHAR(100)",
+          "notNull": true
+        },
+        "user_id": {
+          "type": "INT",
+          "notNull": true
+        },
+        "is_public": {
+          "type": "BOOLEAN",
+          "default": false
+        },
+        "created_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "user_id",
+          "references": "users(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_playlists_user",
+          "columns": ["user_id"]
+        },
+        {
+          "name": "idx_playlists_public",
+          "columns": ["is_public"]
+        }
+      ]
+    },
+    "playlist_songs": {
+      "columns": {
+        "playlist_id": {
+          "type": "INT",
+          "notNull": true
+        },
+        "song_id": {
+          "type": "INT",
+          "notNull": true
+        },
+        "position": {
+          "type": "INT",
+          "notNull": true
+        },
+        "added_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "primaryKey": ["playlist_id", "song_id"],
+      "foreignKeys": [
+        {
+          "column": "playlist_id",
+          "references": "playlists(id)",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "song_id",
+          "references": "songs(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_playlist_songs_position",
+          "columns": ["playlist_id", "position"]
+        }
+      ]
+    },
+    "song_listens": {
+      "columns": {
+        "id": {
+          "type": "INT",
+          "autoIncrement": true,
+          "primaryKey": true
+        },
+        "song_id": {
+          "type": "INT",
+          "notNull": true
+        },
+        "user_id": {
+          "type": "INT",
+          "nullable": true
+        },
+        "ip_address": {
+          "type": "VARCHAR(45)",
+          "nullable": true
+        },
+        "listened_at": {
+          "type": "TIMESTAMP",
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "song_id",
+          "references": "songs(id)",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "user_id",
+          "references": "users(id)",
+          "onDelete": "SET NULL"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_song_listens_song",
+          "columns": ["song_id"]
+        },
+        {
+          "name": "idx_song_listens_user",
+          "columns": ["user_id"]
+        },
+        {
+          "name": "idx_song_listens_date",
+          "columns": ["listened_at"]
+        }
+      ]
+    }
+  }
+}

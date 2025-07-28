@@ -1,0 +1,105 @@
+/* Queue Component */
+.queue-section {
+    margin-top: var(--spacing-lg);
+    border-top: 1px solid var(--glass-border);
+    padding-top: var(--spacing-lg);
+}
+
+.queue-header {
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.queue-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 0;
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+    border-radius: var(--border-radius-sm);
+}
+
+.queue-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.queue-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.queue-item-title {
+    font-size: var(--font-size-normal);
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-artist {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-duration {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+    margin-left: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.queue-item.current-song {
+    background-color: rgba(140, 103, 239, 0.2);
+    border-left: 3px solid var(--accent-primary);
+    padding-left: var(--spacing-lg);
+}
+
+.queue-item.current-song .queue-item-title {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.queue-item.current-song:hover {
+    background-color: rgba(140, 103, 239, 0.2);
+    cursor: default;
+}
+
+.queue-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: var(--spacing-lg) 0;
+}
+
+/* Scrollbar styling for queue list */
+.queue-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.queue-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.queue-list::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+
+.queue-list::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-secondary);
+}

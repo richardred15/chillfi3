@@ -1,0 +1,35 @@
+{
+  "name": "chillfi3",
+  "version": "1.0.0",
+  "description": "Private Music Library - Self-hosted music streaming platform",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "install-deps": "cd server && npm install",
+    "test": "cd server && npm test",
+    "docker:build": "docker build -t chillfi3 .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "setup": "npm run install-deps && echo 'Configure .env files and database'",
+    "deploy": "docker-compose -f docker-compose.prod.yml up -d"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/richardred15/chillfi3.git"
+  },
+  "keywords": [
+    "music",
+    "streaming",
+    "self-hosted",
+    "private",
+    "library",
+    "nodejs",
+    "php"
+  ],
+  "author": "ChillFi3",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

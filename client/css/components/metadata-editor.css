@@ -1,0 +1,168 @@
+/* Metadata Editor Component */
+.metadata-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(--glass-bg);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.metadata-modal-content {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    width: 500px;
+    max-width: 90vw;
+    max-height: 90vh;
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.metadata-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.metadata-modal-header h2 {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: var(--font-size-medium);
+    font-weight: 600;
+}
+
+.metadata-modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-circle);
+    transition: background-color var(--transition-speed);
+}
+
+.metadata-modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.metadata-form {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.metadata-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.metadata-form label {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+}
+
+.metadata-form input {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-normal);
+}
+
+.metadata-form input:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.btn-cancel {
+    background-color: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.btn-cancel:hover {
+    background-color: var(--bg-elevated);
+}
+
+.btn-save {
+    background: var(--gradient);
+    border: none;
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity var(--transition-speed);
+}
+
+.btn-save:hover {
+    opacity: 0.9;
+}
+
+.btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.album-art-section {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.album-art-preview {
+    width: 80px;
+    height: 80px;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.btn-upload-art {
+    background-color: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-small);
+    transition: background-color var(--transition-speed);
+}
+
+.btn-upload-art:hover {
+    background-color: var(--bg-elevated);
+}

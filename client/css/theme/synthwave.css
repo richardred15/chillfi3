@@ -1,0 +1,8 @@
+/* Synthwave Theme - Pink/Purple */
+:root {
+    --accent-primary: #ff0080;
+    --accent-secondary: #7928ca;
+    --accent-primary-rgb: 255, 0, 128;
+    --accent-secondary-rgb: 121, 40, 202;
+    --theme-name: 'synthwave';
+}

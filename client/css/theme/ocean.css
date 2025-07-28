@@ -1,0 +1,8 @@
+/* Ocean Theme - Blue Gradient */
+:root {
+    --accent-primary: #667eea;
+    --accent-secondary: #764ba2;
+    --accent-primary-rgb: 102, 126, 234;
+    --accent-secondary-rgb: 118, 75, 162;
+    --theme-name: 'ocean';
+}

@@ -1,0 +1,367 @@
+/* Profile Component */
+.profile-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    box-shadow: var(--box-shadow);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+    opacity: 0;
+    transition: all var(--transition-speed) ease;
+    overflow: hidden;
+}
+
+.profile-popup.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.profile-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.profile-popup-title {
+    font-size: var(--font-size-medium);
+    font-weight: 600;
+}
+
+.profile-popup-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-circle);
+    transition: background-color var(--transition-speed);
+}
+
+.profile-popup-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-popup-content {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+}
+
+.profile-section {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-xxl);
+}
+
+.profile-avatar-container {
+    position: relative;
+    margin-right: var(--spacing-xl);
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--border-radius-circle);
+    background: var(--gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.profile-edit-button {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--border-radius-circle);
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+    padding: 0;
+}
+
+.profile-edit-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-name-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.profile-name {
+    font-size: var(--font-size-large);
+    font-weight: 600;
+    margin-right: var(--spacing-sm);
+}
+
+.profile-stats {
+    display: flex;
+    gap: var(--spacing-xxl);
+}
+
+.profile-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-stat-value {
+    font-size: var(--font-size-medium);
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.profile-stat-label {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+}
+
+.profile-bio {
+    margin-bottom: var(--spacing-xxl);
+}
+
+.profile-bio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.profile-bio-header .profile-edit-button {
+    position: static;
+    margin-left: var(--spacing-sm);
+}
+
+.profile-name-container .profile-edit-button {
+    position: static;
+    margin-left: var(--spacing-sm);
+}
+
+.profile-bio h3 {
+    font-size: var(--font-size-normal);
+    font-weight: 600;
+}
+
+.profile-bio p {
+    line-height: 1.6;
+}
+
+.profile-uploads h3 {
+    font-size: var(--font-size-normal);
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+}
+
+.profile-song-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.profile-song-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--bg-elevated);
+    border-radius: var(--border-radius-md);
+    transition: background-color var(--transition-speed);
+    cursor: pointer;
+}
+
+.profile-song-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.profile-song-title {
+    font-weight: 500;
+}
+
+.profile-song-stats {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+}
+
+.profile-song-play {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-circle);
+    transition: opacity var(--transition-speed);
+}
+
+.profile-song-play:hover {
+    opacity: 0.7;
+}
+
+.profile-no-uploads {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+/* Reset Password Modal */
+.reset-password-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--box-shadow);
+    z-index: 1100;
+    visibility: hidden;
+    opacity: 0;
+    transition: all var(--transition-speed) ease;
+}
+
+.reset-password-modal.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.reset-password-modal-content {
+    padding: var(--spacing-xl);
+}
+
+.reset-password-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.reset-password-modal-header h3 {
+    margin: 0;
+    font-size: var(--font-size-medium);
+    font-weight: 600;
+}
+
+.reset-password-modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-circle);
+    transition: background-color var(--transition-speed);
+}
+
+.reset-password-modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.reset-password-modal .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.reset-password-modal .form-group label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+}
+
+.reset-password-modal .form-group input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--font-size-normal);
+}
+
+.reset-password-modal .form-group input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.reset-password-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    margin-top: var(--spacing-lg);
+}
+
+.reset-password-actions .btn-cancel {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.reset-password-actions .btn-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.reset-password-actions .btn-primary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--gradient);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity var(--transition-speed);
+}
+
+.reset-password-actions .btn-primary:hover {
+    opacity: 0.9;
+}
+
+.reset-password-actions .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.reset-password-error {
+    color: #ff4444;
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(255, 68, 68, 0.1);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-small);
+}

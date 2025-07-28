@@ -1,0 +1,88 @@
+.admin-section {
+    margin-bottom: var(--spacing-xxl);
+}
+
+.admin-section h3 {
+    font-size: var(--font-size-normal);
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+}
+
+.admin-form .form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.admin-form label {
+    display: block;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="password"] {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: var(--font-size-normal);
+    transition: all var(--transition-speed);
+}
+
+.admin-form input[type="text"]:focus,
+.admin-form input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-form input[type="checkbox"] {
+    margin-right: var(--spacing-xs);
+    accent-color: var(--accent-primary);
+}
+
+.admin-button {
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--gradient);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-normal);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.admin-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow);
+}
+
+.admin-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.admin-result {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-small);
+}
+
+.admin-result.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.admin-result.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}

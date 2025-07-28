@@ -1,0 +1,68 @@
+/* Theme Variables */
+:root {
+    /* Color Palette */
+    --bg-primary: #121212;
+    --bg-secondary: #181818;
+    --bg-elevated: #282828;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    /* Accent colors loaded from theme files */
+    --glass-bg: rgba(30, 30, 30, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    
+    /* Typography */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-large: 24px;
+    --font-size-medium: 18px;
+    --font-size-normal: 14px;
+    --font-size-small: 12px;
+    --font-size-micro: 10px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-xxl: 24px;
+    
+    /* Borders */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-circle: 50%;
+    
+    /* Effects */
+    --transition-speed: 0.2s;
+    --box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    --box-shadow-light: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --gradient: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    
+    /* Interactive States */
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --hover-bg-light: rgba(255, 255, 255, 0.05);
+    --active-bg: rgba(40, 40, 40, 0.9);
+    --input-bg: rgba(0, 0, 0, 0.2);
+    --bg-hover: rgba(255, 255, 255, 0.1);
+    --border-color: var(--glass-border);
+    
+    /* Overlay Opacity Levels */
+    --overlay-opacity-low: 0.1;
+    --overlay-opacity-medium: 0.4;
+    --overlay-opacity-high: 0.8;
+    
+    /* Icon Colors */
+    --icon-primary: var(--text-primary);
+    --icon-secondary: var(--text-secondary);
+    --icon-accent: var(--accent-primary);
+    
+    /* Layout */
+    --sidebar-width: 240px;
+    --sidebar-width-tablet: 70px;
+    --player-height: 90px;
+    --player-height-mobile: 70px;
+    
+    /* Section Spacing */
+    --section-margin: 32px;
+    --section-title-size: 20px;
+}

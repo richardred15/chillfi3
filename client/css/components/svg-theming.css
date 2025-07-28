@@ -1,0 +1,204 @@
+/* SVG Theming - Dynamic gradient updates */
+
+/* Update all SVG gradients to use CSS variables */
+svg defs linearGradient stop:first-child {
+    stop-color: var(--accent-primary);
+}
+
+svg defs linearGradient stop:last-child {
+    stop-color: var(--accent-secondary);
+}
+
+/* Specific gradient overrides for better theming */
+#logoGradient stop:first-child,
+#playGradient stop:first-child,
+#homeGradient stop:first-child,
+#searchGradient stop:first-child,
+#menuGradient stop:first-child {
+    stop-color: var(--accent-primary);
+}
+
+#logoGradient stop:last-child,
+#playGradient stop:last-child,
+#homeGradient stop:last-child,
+#searchGradient stop:last-child,
+#menuGradient stop:last-child {
+    stop-color: var(--accent-secondary);
+}
+
+/* Stroke gradients */
+#playStrokeGradient stop:first-child {
+    stop-color: var(--accent-primary);
+}
+
+#playStrokeGradient stop:last-child {
+    stop-color: var(--accent-secondary);
+}
+
+/* Ensure all themed elements use CSS variables */
+.nav-item.active {
+    background: linear-gradient(
+        90deg,
+        var(--accent-primary),
+        var(--accent-secondary)
+    );
+    background: linear-gradient(
+        90deg,
+        rgba(var(--accent-primary-rgb), 0.1),
+        rgba(var(--accent-secondary-rgb), 0.1)
+    );
+}
+
+/* Player button theming */
+.player-button.primary {
+    background: var(--gradient);
+}
+
+/* Progress bars */
+.progress-current,
+.volume-current {
+    background: var(--gradient);
+}
+
+/* Upload button */
+.upload-button {
+    background: var(--gradient);
+}
+
+/* Card play buttons */
+.card-play {
+    background: var(--gradient);
+}
+
+/* Form buttons */
+.login-button,
+.upload-submit,
+.btn-primary {
+    background: var(--gradient);
+}
+
+/* Default album artwork fallback */
+.card-image:empty,
+.shared-artwork:empty,
+.shared-artwork.no-artwork {
+    background: var(--gradient);
+}
+
+/* Subtle themed content background */
+#content {
+    background: radial-gradient(
+            circle at 20% 80%,
+            rgba(var(--accent-primary-rgb), 0.03) 0%,
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 80% 20%,
+            rgba(var(--accent-secondary-rgb), 0.03) 0%,
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 40% 40%,
+            rgba(var(--accent-primary-rgb), 0.02) 0%,
+            transparent 50%
+        );
+}
+
+/* Subtle themed main content background */
+.main-content {
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-primary-rgb), 0.01) 0%,
+        transparent 50%,
+        rgba(var(--accent-secondary-rgb), 0.01) 100%
+    );
+}
+
+/* Logo text spacing */
+#logo h1 {
+    padding-left: var(--spacing-sm);
+}
+
+/* SVG Icon Theming for Visibility */
+.upload-dropzone img,
+.upload-button-label img,
+.file-item-artwork-upload img,
+.file-item-remove img,
+.upload-modal-close img {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+/* Button hover states for SVG icons */
+.upload-modal-close:hover img,
+.file-item-remove:hover img,
+.file-item-artwork-upload:hover img {
+    opacity: 1;
+}
+
+/* Upload dropzone icon theming */
+.upload-dropzone img {
+    filter: brightness(0) invert(1);
+    opacity: 0.6;
+}
+
+.upload-dropzone:hover img,
+.upload-dropzone.dragover img {
+    opacity: 0.8;
+    filter: brightness(0) invert(1);
+}
+
+/* Context menu icons */
+.context-menu-icon {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+/* General button icon theming - exclude themed SVGs */
+button img:not([src*="play.svg"]):not([src*="pause.svg"]):not([data-theme-svg]) {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity var(--transition-speed);
+}
+
+button:hover img:not([src*="play.svg"]):not([src*="pause.svg"]):not([data-theme-svg]) {
+    opacity: 1;
+}
+
+/* Upload button specifically needs white icon */
+.upload-button img {
+    filter: brightness(0) invert(1) !important;
+    opacity: 1;
+}
+
+/* Navigation icons */
+.nav-item img {
+    transition: filter var(--transition-speed), opacity var(--transition-speed);
+}
+
+/* Profile edit button icons */
+.profile-edit-button img {
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
+    transition: opacity var(--transition-speed);
+}
+
+.profile-edit-button:hover img {
+    opacity: 1;
+}
+
+/* Logo icon - preserve gradients */
+#logo img {
+    /* Logo should maintain its gradient colors, no filter */
+}
+
+/* Menu button icon */
+.now-playing-button img {
+    /* Menu icon should maintain its gradient colors, no filter */
+}
+
+/* Force image refresh during theme updates */
+img.theme-updating {
+    opacity: 0.1;
+    transform: scale(0.99);
+    transition: none;
+}

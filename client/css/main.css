@@ -1,0 +1,21 @@
+/* Main CSS File - Imports all components */
+@import 'theme/default.css';
+@import 'base.css';
+@import 'components/sidebar.css';
+@import 'components/header.css';
+@import 'components/user-menu.css';
+@import 'components/profile.css';
+@import 'components/cards.css';
+@import 'components/song-list.css';
+@import 'components/player.css';
+@import 'components/upload-modal.css';
+@import 'components/toast.css';
+@import 'components/content.css';
+@import 'components/global-drag.css';
+@import 'components/queue.css';
+@import 'components/albumView.css';
+@import 'components/admin.css';
+@import 'components/svg-theming.css';
+@import 'components/contextMenu.css';
+@import 'components/forms.css';
+@import 'components/offline.css';

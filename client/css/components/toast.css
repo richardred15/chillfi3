@@ -1,0 +1,33 @@
+/* Toast Notification Component */
+.toast {
+    position: fixed;
+    bottom: 100px;
+    right: var(--spacing-xl);
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform var(--transition-speed), opacity var(--transition-speed);
+    z-index: 20000;
+    pointer-events: none;
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.toast-icon {
+    margin-right: var(--spacing-md);
+}
+
+.toast-message {
+    font-size: var(--font-size-normal);
+}
