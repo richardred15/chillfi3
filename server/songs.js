@@ -544,8 +544,8 @@ function handleSocket(socket, io) {
                 GROUP BY al.id
                 HAVING song_count > 0
                 ORDER BY al.title
-                LIMIT ? OFFSET ?
-            `, [parseInt(limit), parseInt(offset)]);
+                LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
+            `);
 
             const [totalCount] = await database.query(`
                 SELECT COUNT(DISTINCT al.id) as count
@@ -597,9 +597,9 @@ function handleSocket(socket, io) {
                 LEFT JOIN albums al ON s.album_id = al.id
                 WHERE s.title LIKE ? OR a.name LIKE ? OR al.title LIKE ? OR s.genre LIKE ?
                 ORDER BY s.title ASC
-                LIMIT ? OFFSET ?
+                LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
             `,
-                [searchTerm, searchTerm, searchTerm, searchTerm, parseInt(limit), parseInt(offset)]
+                [searchTerm, searchTerm, searchTerm, searchTerm]
             );
 
             // Get total count
@@ -649,9 +649,9 @@ function handleSocket(socket, io) {
                 LEFT JOIN albums al ON s.album_id = al.id
                 WHERE sl.user_id = ?
                 ORDER BY sl.listened_at DESC
-                LIMIT ? OFFSET ?
+                LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
             `,
-                [socket.user.id, parseInt(limit), parseInt(offset)]
+                [socket.user.id]
             );
 
             // Get total count

@@ -54,7 +54,6 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
         queryParams.push(filters.album);
     }
 
-    queryParams.push(parseInt(limit), parseInt(offset));
     const songs = await database.query(
         `
         SELECT s.id, s.title, s.duration, s.genre, s.track_number,
@@ -69,7 +68,7 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
         WHERE ${whereClause}
         GROUP BY s.id
         ORDER BY s.uploaded_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
     `,
         queryParams
     );
@@ -303,9 +302,9 @@ async function getRecentlyPlayed(userId, limit = 10) {
         LEFT JOIN albums al ON s.album_id = al.id
         WHERE sl.user_id = ?
         ORDER BY sl.listened_at DESC
-        LIMIT ?
+        LIMIT ${parseInt(limit)}
     `,
-        [userId, parseInt(limit)]
+        [userId]
     );
 }
 
