@@ -5,6 +5,7 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 // const multer = require('multer');
 const config = require('./config');
 const database = require('./database');
+const { generateSecureUrl } = require('./services/uploadService');
 
 const s3Client = new S3Client({
     region: config.aws.region,
@@ -14,6 +15,13 @@ const s3Client = new S3Client({
     }
 });
 const BUCKET_NAME = config.aws.s3Bucket;
+
+// Helper to secure profile image URLs
+async function secureProfileImage(url) {
+    if (!url) return url;
+    const key = url.split('/').slice(-2).join('/');
+    return await generateSecureUrl(key, 3600); // 1 hour for profile images
+}
 
 // Handle socket events
 function handleSocket(socket, _io) {
@@ -43,6 +51,11 @@ function handleSocket(socket, _io) {
             }
             
             const user = users[0];
+            
+            // Secure profile image URL
+            if (user.profile_image_url) {
+                user.profile_image_url = await secureProfileImage(user.profile_image_url);
+            }
             
             // Get user stats
             const [uploadCount] = await database.query(
@@ -165,9 +178,16 @@ function handleSocket(socket, _io) {
                 [userId]
             );
             
+            const user = users[0];
+            
+            // Secure profile image URL
+            if (user.profile_image_url) {
+                user.profile_image_url = await secureProfileImage(user.profile_image_url);
+            }
+            
             socket.emit('user:update', {
                 success: true,
-                user: users[0]
+                user
             });
             
         } catch (error) {
@@ -228,9 +248,12 @@ function handleSocket(socket, _io) {
                 [profileImageUrl, userId]
             );
             
+            // Generate secure URL for response
+            const secureUrl = await secureProfileImage(profileImageUrl);
+            
             socket.emit('user:uploadAvatar', {
                 success: true,
-                profileImageUrl
+                profileImageUrl: secureUrl
             });
             
         } catch (error) {

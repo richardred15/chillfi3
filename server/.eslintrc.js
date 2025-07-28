@@ -19,7 +19,7 @@ module.exports = {
     },
     rules: {
         'indent': ['error', 4],
-        'linebreak-style': ['error', 'unix'],
+        'linebreak-style': 'off',
         'quotes': ['error', 'single'],
         'semi': ['error', 'always'],
         'no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],

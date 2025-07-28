@@ -19,6 +19,7 @@ const { success, error, paginated } = require('./utils/response');
 const rateLimiter = require('./middleware/rateLimiter');
 const uploadService = require('./services/uploadService');
 const songService = require('./services/songService');
+const { generateSecureUrl } = uploadService;
 
 const s3Client = new S3Client({
     region: config.aws.region,
@@ -31,6 +32,18 @@ const BUCKET_NAME = config.aws.s3Bucket;
 
 // Get upload sessions from uploadService
 const { imageUploadSessions } = uploadService;
+
+// Helper to extract S3 key from URL
+function extractS3Key(url) {
+    if (!url) return null;
+    return url.split('/').slice(-2).join('/');
+}
+
+// Helper to secure image URLs
+async function secureImageUrl(url) {
+    const key = extractS3Key(url);
+    return key ? await generateSecureUrl(key, 3600) : url; // 1 hour for images
+}
 
 // Handle socket events
 function handleSocket(socket, _io) {
@@ -53,6 +66,14 @@ function handleSocket(socket, _io) {
             }
 
             const result = await songService.getSongs(filters, page, limit);
+            
+            // Secure album art URLs
+            for (const song of result.songs) {
+                if (song.cover_art_url) {
+                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+            }
+            
             paginated(
                 socket,
                 'song:list',
@@ -384,9 +405,11 @@ function handleSocket(socket, _io) {
             }
 
             const song = songs[0];
+            const audioKey = extractS3Key(song.file_path);
+            const secureAudioUrl = audioKey ? await generateSecureUrl(audioKey) : song.file_path;
 
             socket.emit('song:play', {
-                url: song.file_path,
+                url: secureAudioUrl,
                 metadata: {
                     id: song.id,
                     title: song.title,
@@ -547,6 +570,13 @@ function handleSocket(socket, _io) {
                 LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
             `);
 
+            // Secure album art URLs
+            for (const album of albums) {
+                if (album.cover_art_url) {
+                    album.cover_art_url = await secureImageUrl(album.cover_art_url);
+                }
+            }
+
             const [totalCount] = await database.query(`
                 SELECT COUNT(DISTINCT al.id) as count
                 FROM albums al
@@ -602,6 +632,13 @@ function handleSocket(socket, _io) {
                 [searchTerm, searchTerm, searchTerm, searchTerm]
             );
 
+            // Secure album art URLs
+            for (const song of songs) {
+                if (song.cover_art_url) {
+                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+            }
+
             // Get total count
             const [totalResult] = await database.query(
                 `
@@ -653,6 +690,13 @@ function handleSocket(socket, _io) {
             `,
                 [socket.user.id]
             );
+
+            // Secure album art URLs
+            for (const song of songs) {
+                if (song.cover_art_url) {
+                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+            }
 
             // Get total count
             const [totalResult] = await database.query(

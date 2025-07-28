@@ -1,7 +1,8 @@
 /**
  * Upload Service
  */
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
 const config = require('../config');
 const database = require('../database');
@@ -19,6 +20,10 @@ const BUCKET_NAME = config.aws.s3Bucket;
 // Image upload sessions storage with size limit
 const imageUploadSessions = new Map();
 const MAX_UPLOAD_SESSIONS = 100;
+
+// URL cache for pre-signed URLs
+const urlCache = new Map();
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 // Clean up old image upload sessions
 const cleanupInterval = setInterval(() => {
@@ -66,10 +71,35 @@ function cleanupSession(uploadId) {
     }
 }
 
+// Generate secure URL with caching
+async function generateSecureUrl(s3Key, expiresIn = 900) {
+    const cacheKey = `${s3Key}_${expiresIn}`;
+    const cached = urlCache.get(cacheKey);
+    
+    if (cached && Date.now() < cached.expires) {
+        return cached.url;
+    }
+    
+    const command = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key
+    });
+    
+    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    
+    urlCache.set(cacheKey, {
+        url,
+        expires: Date.now() + CACHE_DURATION
+    });
+    
+    return url;
+}
+
 // Cleanup function for graceful shutdown
 function cleanup() {
     clearInterval(cleanupInterval);
     imageUploadSessions.clear();
+    urlCache.clear();
     console.log('Upload service cleaned up');
 }
 
@@ -265,5 +295,6 @@ module.exports = {
     processImageChunk,
     processFile,
     imageUploadSessions,
+    generateSecureUrl,
     cleanup,
 };
