@@ -1,7 +1,7 @@
 /**
  * Integration Tests
  */
-const request = require('supertest');
+// const request = require('supertest');
 const { app, io } = require('../server');
 const Client = require('socket.io-client');
 

@@ -2,7 +2,7 @@
  * Users Module
  */
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const multer = require('multer');
+// const multer = require('multer');
 const config = require('./config');
 const database = require('./database');
 
@@ -16,7 +16,7 @@ const s3Client = new S3Client({
 const BUCKET_NAME = config.aws.s3Bucket;
 
 // Handle socket events
-function handleSocket(socket, io) {
+function handleSocket(socket, _io) {
     // Get user profile
     socket.on('user:profile', async (data) => {
         try {

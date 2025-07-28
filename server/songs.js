@@ -9,9 +9,9 @@ require('dotenv').config({ path: __dirname + '/.env' });
 const {
     S3Client,
     DeleteObjectCommand,
-    PutObjectCommand,
+    // PutObjectCommand,
 } = require('@aws-sdk/client-s3');
-const crypto = require('crypto');
+// const crypto = require('crypto');
 const config = require('./config');
 const database = require('./database');
 const logger = require('./utils/logger');
@@ -30,10 +30,10 @@ const s3Client = new S3Client({
 const BUCKET_NAME = config.aws.s3Bucket;
 
 // Get upload sessions from uploadService
-const { uploadSessions, imageUploadSessions } = uploadService;
+const { imageUploadSessions } = uploadService;
 
 // Handle socket events
-function handleSocket(socket, io) {
+function handleSocket(socket, _io) {
     // List songs
     socket.on('song:list', async (data) => {
         try {
