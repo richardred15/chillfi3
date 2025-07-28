@@ -18,10 +18,10 @@ services:
   db:
     image: mariadb:10.11
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-dev_root_password_change_in_production}
       MYSQL_DATABASE: musiclib
       MYSQL_USER: musiclib
-      MYSQL_PASSWORD: musiclib_password
+      MYSQL_PASSWORD: ${DB_PASSWORD:-dev_password_change_in_production}
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
