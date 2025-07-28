@@ -1,5 +1,7 @@
 # ChillFi3 🎵
 
+[![CI/CD Pipeline](https://github.com/richardred15/chillfi3/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/richardred15/chillfi3/actions/workflows/ci.yml)
+
 A modern, self-hosted private music library with real-time streaming, social sharing, and beautiful UI.
 
 ## ✨ Features
