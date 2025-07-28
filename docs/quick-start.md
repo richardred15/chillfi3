@@ -39,14 +39,27 @@ docker build -t chillfi3 .
 docker-compose up -d
 ```
 
-## 4. Access Application
+## 4. Create Admin User
 
-Open http://localhost in your browser. The database will be created automatically on first run.
+After the container starts, create your first admin user:
 
-Create your admin account through the web interface:
-1. Click "Create Account" 
-2. Fill in your details
-3. The first user automatically becomes an admin
+```bash
+# Access the container console
+docker exec -it chillfi3-app-1 bash
+
+# In the container, navigate to server directory
+cd /app/server
+
+# Start the server (if not already running)
+npm start
+
+# In the server console, create admin user
+create-admin admin your_password
+```
+
+## 5. Access Application
+
+Open http://localhost in your browser and login with your admin credentials.
 
 ## Next Steps
 

@@ -38,7 +38,7 @@ nano server/.env
 nano .env.client
 
 # 3. Deploy
-npm run deploy
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Method 2: Manual Production
@@ -51,7 +51,7 @@ sudo usermod -aG www-data chillfi3
 # 2. Deploy application
 sudo -u chillfi3 git clone https://github.com/richardred15/chillfi3.git /home/chillfi3/app
 cd /home/chillfi3/app
-sudo -u chillfi3 npm run install-deps
+sudo -u chillfi3 bash -c 'cd server && npm install'
 
 # 3. Configure services
 sudo cp docs/examples/systemd/chillfi3.service /etc/systemd/system/
@@ -379,7 +379,7 @@ cd /home/chillfi3/app
 git pull origin main
 
 # Update dependencies
-npm run install-deps
+cd server && npm install
 
 # Restart services
 pm2 restart chillfi3
@@ -449,6 +449,6 @@ mysql musiclib < /home/chillfi3/backups/db_YYYYMMDD_HHMMSS.sql
 ```bash
 cd /home/chillfi3/app
 git reset --hard HEAD~1
-npm run install-deps
+cd server && npm install
 pm2 restart chillfi3
 ```

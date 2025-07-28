@@ -53,8 +53,15 @@ npm start
 # Database will be created automatically on first run
 ```
 
-5. **Access the application**
-Open http://localhost in your browser. Create your first admin account through the web interface.
+5. **Create admin user**
+In the server console, create your first admin user:
+```bash
+# In the server console (where npm start is running)
+create-admin admin your_password
+```
+
+6. **Access the application**
+Open http://localhost:3005 in your browser and login with your admin credentials.
 
 ## 🐳 Docker Deployment
 
@@ -160,7 +167,7 @@ HTTPS_CA=/app/ssl/chain.pem
 
 4. **Deploy with HTTPS**
 ```bash
-npm run deploy
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Manual HTTPS Setup

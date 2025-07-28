@@ -202,4 +202,18 @@ See `server/schema.json` for complete database schema definition.
 The database schema is automatically created when the server starts. No manual setup required.
 
 ## Admin User Creation
-The first user created through the web interface automatically becomes an admin. No CLI commands needed.
+Admin users are created through the server CLI console:
+
+```bash
+# In the server console (where npm start is running)
+create-admin username password
+
+# Or use debug-users command which creates admin/password if no users exist
+debug-users
+```
+
+Available CLI commands:
+- `create-admin <username> <password>` - Create admin user
+- `add-user <username> [password] [admin]` - Add any user
+- `list-users` - Show all users
+- `debug-users` - Debug user table, creates test admin if none exist

@@ -98,10 +98,21 @@ npm start
 The database schema is automatically created when the server starts. No manual setup required.
 
 ### 2. Create Admin User
-Create an admin user through the web interface:
-1. Open the application in your browser
-2. Click "Create Account" if no users exist
-3. The first user automatically becomes an admin
+Create an admin user through the server console:
+
+**Docker:**
+```bash
+# Access container console
+docker exec -it chillfi3-app-1 bash
+cd /app/server && npm start
+# In server console: create-admin admin your_password
+```
+
+**Manual Installation:**
+```bash
+# In the server console (where npm start is running)
+create-admin admin your_password
+```
 
 ### 3. Configure Firewall
 ```bash

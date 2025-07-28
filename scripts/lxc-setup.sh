@@ -56,11 +56,10 @@ lxc exec $CONTAINER_NAME -- chmod +x /var/www/chillfi3/server/server.js
 echo "📦 Installing Node.js dependencies..."
 lxc exec $CONTAINER_NAME -- bash -c "cd /var/www/chillfi3/server && npm install"
 
-# Configure MySQL
+# Configure MySQL (database will be created automatically by the application)
 echo "🗄️ Configuring MySQL..."
-lxc exec $CONTAINER_NAME -- mysql -e "CREATE DATABASE IF NOT EXISTS musiclib;"
 lxc exec $CONTAINER_NAME -- mysql -e "CREATE USER IF NOT EXISTS 'musiclib'@'localhost' IDENTIFIED BY 'musiclib_password';"
-lxc exec $CONTAINER_NAME -- mysql -e "GRANT ALL PRIVILEGES ON musiclib.* TO 'musiclib'@'localhost';"
+lxc exec $CONTAINER_NAME -- mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'musiclib'@'localhost';"
 lxc exec $CONTAINER_NAME -- mysql -e "FLUSH PRIVILEGES;"
 
 # Configure Nginx
@@ -76,7 +75,7 @@ lxc file push docker/supervisord.conf $CONTAINER_NAME/etc/supervisor/conf.d/chil
 # Configure environment
 echo "⚙️ Setting up environment..."
 lxc file push server/.env.example $CONTAINER_NAME/var/www/chillfi3/server/.env
-lxc file push .env.client $CONTAINER_NAME/var/www/chillfi3/.env.client
+lxc file push .env.client.example $CONTAINER_NAME/var/www/chillfi3/.env.client
 
 # Start services
 echo "🚀 Starting services..."
@@ -92,5 +91,5 @@ echo "📝 Container name: $CONTAINER_NAME"
 echo ""
 echo "Next steps:"
 echo "1. Configure server/.env with your database credentials"
-echo "2. Run database setup: lxc exec $CONTAINER_NAME -- bash -c 'cd /var/www/chillfi3/server && npm start'"
-echo "3. Create admin user using the CLI interface"
+echo "2. Start the application: lxc exec $CONTAINER_NAME -- bash -c 'cd /var/www/chillfi3/server && npm start'"
+echo "3. In the server console, create admin user: create-admin admin your_password"

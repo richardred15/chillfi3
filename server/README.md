@@ -37,7 +37,10 @@ npm run dev
 ```
 
 4. Create admin user:
-Open the application in your browser and create the first user account. The first user automatically becomes an admin.
+In the server console (where npm start is running), create your first admin user:
+```bash
+create-admin admin your_password
+```
 
 ## Features
 

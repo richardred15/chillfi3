@@ -124,12 +124,11 @@ mysql -e "SHOW GRANTS FOR 'musiclib'@'localhost';"
 
 **Can't login with admin user**
 ```bash
-# Create admin user through web interface
-# 1. Open application in browser
-# 2. Click "Create Account" if no users exist
-# 3. First user automatically becomes admin
+# Create admin user through server console
+# In the server console (where npm start is running):
+create-admin admin your_password
 
-# If you need to reset, check database directly
+# Or check existing users in database
 mysql musiclib -e "SELECT id, username, is_admin FROM users;"
 ```
 
