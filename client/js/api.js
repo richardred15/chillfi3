@@ -1,3 +1,5 @@
+import APIEvents from "./api_events.js";
+
 /**
  * Socket.IO API Client
  */
@@ -12,6 +14,7 @@ class API {
         this.maxReconnectAttempts = 10;
         this.reconnectDelay = 5000;
         this.onConnectionChange = null;
+        this.events = new APIEvents();
     }
 
     // Initialize connection
@@ -22,7 +25,7 @@ class API {
                 resolve();
                 return;
             }
-            
+
             // Disconnect existing socket if present
             if (this.socket) {
                 this.socket.disconnect();
@@ -135,6 +138,7 @@ class API {
                 this.user = response.data.user;
                 localStorage.setItem("chillfi_token", this.token);
                 console.log("Login successful");
+                this.events.fire("authenticated");
                 return {
                     success: true,
                     token: response.data.token,
@@ -173,6 +177,8 @@ class API {
                     username: decoded.username,
                     is_admin: decoded.isAdmin,
                 };
+                // Trigger authenticated callbacks
+                this.events.fire("authenticated");
             }
         }
         return response;
@@ -262,17 +268,22 @@ class API {
     async getSong(songId) {
         try {
             const result = await this.emit("song:get", { songId });
-            
+
             // Cache the song for offline use
-            if (window.offlineManager && result.success && result.data && result.data.song) {
+            if (
+                window.offlineManager &&
+                result.success &&
+                result.data &&
+                result.data.song
+            ) {
                 window.offlineManager.cacheSong(result.data.song);
             }
-            
+
             return result;
         } catch (error) {
             // Return cached song if offline
             if (window.offlineManager && !window.offlineManager.isOnline) {
-                return this.handleOfflineRequest('song:get', { songId });
+                return this.handleOfflineRequest("song:get", { songId });
             }
             throw error;
         }
@@ -293,7 +304,7 @@ class API {
     async playSong(songId) {
         try {
             const result = await this.emit("song:play", { songId });
-            
+
             // Cache the song metadata for offline use
             if (window.offlineManager && result.success && result.metadata) {
                 window.offlineManager.cacheSong({
@@ -303,10 +314,10 @@ class API {
                     album: result.metadata.album,
                     duration: result.metadata.duration,
                     // Add other metadata if available
-                    ...result.metadata
+                    ...result.metadata,
                 });
             }
-            
+
             return result;
         } catch (error) {
             throw error;
@@ -362,15 +373,22 @@ class API {
         try {
             // If no userId provided, use current user
             const targetUserId = userId || (this.user ? this.user.id : null);
-            return await this.emit("playlist:list", {
+            const response = await this.emit("playlist:list", {
                 userId: targetUserId,
                 page,
                 limit,
             });
+            console.log("Playlists response:", response);
+            return response;
         } catch (error) {
             // Return empty playlists if offline or not connected
-            if (!this.connected || (window.offlineManager && !window.offlineManager.isOnline)) {
-                const offlinePlaylists = window.offlineManager ? window.offlineManager.getOfflinePlaylists() : [];
+            if (
+                !this.connected ||
+                (window.offlineManager && !window.offlineManager.isOnline)
+            ) {
+                const offlinePlaylists = window.offlineManager
+                    ? window.offlineManager.getOfflinePlaylists()
+                    : [];
                 return {
                     success: true,
                     data: {
@@ -379,10 +397,10 @@ class API {
                             total: offlinePlaylists.length,
                             page: 1,
                             limit: offlinePlaylists.length,
-                            totalPages: 1
-                        }
+                            totalPages: 1,
+                        },
                     },
-                    offline: true
+                    offline: true,
                 };
             }
             throw error;

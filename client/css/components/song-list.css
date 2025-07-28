@@ -112,15 +112,15 @@
     .song-list-header {
         grid-template-columns: 50px 1fr 1fr;
     }
-    
+
     .song-list-header-item:nth-child(4) {
         display: none;
     }
-    
+
     .song-item {
         grid-template-columns: 50px 1fr 1fr;
     }
-    
+
     .song-duration {
         display: none;
     }
@@ -130,27 +130,28 @@
     .song-list-header {
         grid-template-columns: 40px 1fr;
     }
-    
+
     .song-list-header-item:nth-child(3),
     .song-list-header-item:nth-child(4) {
         display: none;
     }
-    
+
     .song-item {
         grid-template-columns: 40px 1fr;
     }
-    
+
     .song-artist,
     .song-duration {
         display: none;
     }
-    
+
     .song-info {
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xs);
+        margin-left: var(--section-margin);
     }
-    
+
     .song-info .song-artist {
         display: block;
         font-size: var(--font-size-small);
@@ -159,12 +160,14 @@
 }
 
 @media (max-width: 400px) {
-    .song-list-header, .song-item {
+    .song-list-header,
+    .song-item {
         grid-template-columns: 30px 1fr;
         padding: var(--spacing-sm) var(--spacing-md);
     }
-    
-    .song-number, .song-title {
+
+    .song-number,
+    .song-title {
         font-size: var(--font-size-small);
     }
 }
