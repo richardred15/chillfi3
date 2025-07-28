@@ -27,7 +27,10 @@ COPY server/ ./server/
 COPY client/ ./client/
 COPY *.php ./
 COPY *.js ./
-COPY .env.client ./
+
+# Copy .env.client if it exists, otherwise copy example
+COPY .env.client* ./
+RUN if [ ! -f .env.client ]; then cp .env.client.example .env.client 2>/dev/null || echo 'APP_NAME=ChillFi3' > .env.client; fi
 
 # Copy configuration files
 COPY docker/nginx.conf /etc/nginx/nginx.conf
