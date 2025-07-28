@@ -11,27 +11,33 @@ npm install
 
 2. Configure environment variables in `.env`:
 ```
+# Database
+DB_HOST=localhost
+DB_USER=musiclib
+DB_PASSWORD=your_mysql_password
+DB_NAME=musiclib
+
+# AWS S3 (optional)
 AWS_ACCESS_KEY_ID=your_aws_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret
 AWS_REGION=us-west-2
 S3_BUCKET_NAME=chillfi
-SQL_PASS=your_mysql_password
+
+# Server
+PORT=3005
 JWT_SECRET=your_jwt_secret
-CLIENT_URL=https://your-domain.com
 NODE_ENV=production
 ```
 
-3. Create the first admin user:
-```bash
-npm run create-admin [username] [password]
-```
-
-4. Start the server:
+3. Start the server:
 ```bash
 npm start
 # or for development with auto-restart:
 npm run dev
 ```
+
+4. Create admin user:
+Open the application in your browser and create the first user account. The first user automatically becomes an admin.
 
 ## Features
 

@@ -31,7 +31,8 @@ cd chillfi3
 
 2. **Install dependencies**
 ```bash
-npm run setup
+cd server
+npm install
 ```
 
 3. **Configure environment**
@@ -52,10 +53,8 @@ npm start
 # Database will be created automatically on first run
 ```
 
-5. **Start the application**
-```bash
-npm start
-```
+5. **Access the application**
+Open http://localhost in your browser. Create your first admin account through the web interface.
 
 ## 🐳 Docker Deployment
 
@@ -67,8 +66,8 @@ cp .env.client.example .env.client
 # Edit the .env files with your settings
 
 # Build and run
-npm run docker:build
-npm run docker:run
+docker build -t chillfi3 .
+docker-compose up -d
 ```
 
 ### Production Deployment
@@ -79,7 +78,7 @@ cp secrets/db_password.txt.example secrets/db_password.txt
 # Edit secrets with secure passwords
 
 # Deploy
-npm run deploy
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Manual Docker
@@ -223,13 +222,15 @@ API_URL=https://your-domain.com/api
 
 ```bash
 # Start development server
+cd server
 npm run dev
 
 # Run tests
+cd server
 npm test
 
 # Build for production
-npm run docker:build
+docker build -t chillfi3 .
 ```
 
 ## 📖 API Documentation

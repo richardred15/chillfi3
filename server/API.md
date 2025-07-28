@@ -198,10 +198,8 @@ Socket.IO events can return error objects:
 ## Database Schema
 See `server/schema.json` for complete database schema definition.
 
-## CLI Commands
-The server includes an interactive CLI with commands:
-- `setup-database` - Initialize database
-- `create-admin` - Create admin user
-- `list-users` - List all users
-- `status` - Show server statistics
-- `help` - Show all commands
+## Database Management
+The database schema is automatically created when the server starts. No manual setup required.
+
+## Admin User Creation
+The first user created through the web interface automatically becomes an admin. No CLI commands needed.

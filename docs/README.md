@@ -10,24 +10,15 @@ Welcome to the ChillFi3 documentation! This directory contains comprehensive gui
 - [Configuration](configuration.md) - Environment and settings
 
 ### Deployment
-- [Docker Deployment](docker.md) - Containerized deployment
-- [Manual Deployment](manual-deployment.md) - Traditional server setup
 - [Production Guide](production.md) - Production best practices
-
-### Development
-- [Development Setup](development.md) - Local development environment
-- [API Reference](api.md) - Complete API documentation
-- [Architecture](architecture.md) - System design and structure
+- [Configuration Examples](examples/) - Nginx and systemd configurations
 
 ### Administration
-- [User Management](user-management.md) - Managing users and permissions
-- [Database Management](database.md) - Database operations and maintenance
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
-
-### Security
 - [Security Guide](security.md) - Security best practices
-- [HTTPS Setup](https.md) - SSL/TLS configuration
-- [Backup & Recovery](backup.md) - Data protection strategies
+
+### API Reference
+- [Server API Documentation](../server/API.md) - Complete Socket.IO and REST API docs
 
 ## 🚀 Quick Links
 
