@@ -6,6 +6,8 @@ import AuthManager from './auth.js';
 import ContentManager from './content.js';
 import UploadManager from './upload.js';
 import AdminManager from './admin.js';
+import OfflineManager from './offline.js';
+import CacheManager from './utils/cacheManager.js';
 import ContextMenu from './components/contextMenu.js';
 import MetadataEditor from './components/metadataEditor.js';
 import Toast from './components/toast.js';
@@ -52,46 +54,66 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize global error handler
     const errorHandler = new ErrorHandler(toast);
     
+    // Initialize offline manager first
+    const offlineManager = new OfflineManager();
+    
     // Initialize API connection
     const api = new API();
     
-    // Setup loading and offline handling
+    // Setup loading handling
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingStatus = document.getElementById('loadingStatus');
-    const offlineOverlay = document.getElementById('offlineOverlay');
-    const offlineStatus = document.getElementById('offlineStatus');
     
     let authManager, contentManager, uploadManager, adminManager, player, albumView, playlistManager;
     
-    try {
-        loadingStatus.textContent = 'Connecting to server...';
-        await api.connect();
-        console.log('Connected to ChillFi3 server');
-        loadingStatus.textContent = 'Loading application...';
-        await initializeApp();
-    } catch (error) {
-        console.error('Failed to connect to server:', error);
+    // Start initialization immediately
+    initializeApp().catch(error => {
+        console.error('Failed to initialize app:', error);
         loadingOverlay.style.display = 'none';
-        offlineOverlay.classList.add('show');
-        offlineStatus.textContent = 'Server offline - retrying...';
-        offlineStatus.classList.add('checking');
-        return;
-    }
+    });
     
     async function initializeApp() {
-        // Initialize managers
+        // Start connection in parallel with manager initialization
+        const connectionPromise = (async () => {
+            try {
+                loadingStatus.textContent = 'Connecting to server...';
+                await api.connect();
+                console.log('Connected to ChillFi3 server');
+                return true;
+            } catch (error) {
+                console.error('Connection failed:', error);
+                return false;
+            }
+        })();
+        
+        // Initialize core managers first
+        loadingStatus.textContent = 'Initializing components...';
         authManager = new AuthManager(api, toast);
         contentManager = new ContentManager(api, toast);
         uploadManager = new UploadManager(api, toast);
         adminManager = new AdminManager(api, toast);
         
+        // Wait for connection result before initializing components that need API
+        const connected = await connectionPromise;
+        
+        // Initialize components after connection status is known
+        const metadataEditor = new MetadataEditor(api, toast);
+        const contextMenu = new ContextMenu(api, toast, metadataEditor);
+        player = new Player();
+        const nowPlayingPopup = new NowPlayingPopup();
+        const responsiveHandler = new ResponsiveHandler();
+        const userMenu = new UserMenu(toast);
+        const cardHover = new CardHover();
+        albumView = new AlbumView(api, toast);
+        const themeSwitcher = new ThemeSwitcher();
+        const visualizer = new Visualizer();
+        playlistManager = new PlaylistManager(api, toast);
+        const shareManager = new ShareManager(api, toast);
+        
         // Setup connection change handler now that managers exist
         api.onConnectionChange = (connected) => {
             if (connected) {
                 loadingOverlay.style.display = 'none';
-                offlineOverlay.classList.remove('show');
-                offlineStatus.textContent = 'Connected!';
-                offlineStatus.classList.remove('checking');
                 
                 // Resume uploads if upload manager exists
                 if (window.uploadManager && window.uploadManager.onConnectionRestored) {
@@ -108,57 +130,67 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             } else {
                 loadingOverlay.style.display = 'none';
-                offlineOverlay.classList.add('show');
-                offlineStatus.textContent = 'Attempting to reconnect...';
-                offlineStatus.classList.add('checking');
+                // Offline manager handles this now
             }
         };
         
-        // Initialize authentication
-        await authManager.init();
-        
-        // Initialize content if authenticated
-        if (authManager.isAuthenticated) {
-            await contentManager.init();
-        
-        // Fetch and log version
-        try {
-            console.log('Fetching server version...');
-            const versionResponse = await api.getVersion();
-            console.log('Version response:', versionResponse);
-            console.log('Server version:', versionResponse.version);
+        if (connected) {
+            loadingStatus.textContent = 'Loading user data...';
             
-            // Update service worker with version
-            const updateServiceWorker = () => {
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'VERSION_UPDATE',
-                        version: versionResponse.version
-                    });
-                    console.log('Sent version to service worker:', versionResponse.version);
-                }
-            };
+            // Initialize authentication
+            await authManager.init();
             
-            if (serviceWorkerReady) {
-                updateServiceWorker();
+            // Initialize content if authenticated (non-blocking)
+            if (authManager.isAuthenticated) {
+                // Start content loading but don't wait for it
+                contentManager.init().then(() => {
+                    // Check for share URLs after content is loaded
+                    shareManager.handleShareURL();
+                }).catch(error => {
+                    console.error('Content initialization failed:', error);
+                });
             } else {
-                navigator.serviceWorker.ready.then(updateServiceWorker);
+                // Store share URL parameters for after login
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('song') || urlParams.has('album') || urlParams.has('playlist')) {
+                    sessionStorage.setItem('pendingShareURL', window.location.search);
+                }
             }
-        } catch (error) {
-            console.error('Failed to get version:', error);
-        }
-        
-            // Check for share URLs after connection is established
-            setTimeout(() => shareManager.handleShareURL(), 500);
+            
+            // Fetch version in background (non-blocking)
+            api.getVersion().then(versionResponse => {
+                console.log('Server version:', versionResponse.version);
+                
+                const updateServiceWorker = () => {
+                    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage({
+                            type: 'VERSION_UPDATE',
+                            version: versionResponse.version
+                        });
+                    }
+                };
+                
+                if (serviceWorkerReady) {
+                    updateServiceWorker();
+                } else {
+                    navigator.serviceWorker.ready.then(updateServiceWorker);
+                }
+            }).catch(error => {
+                console.error('Failed to get version:', error);
+            });
         } else {
-            // Store share URL parameters for after login
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('song') || urlParams.has('album') || urlParams.has('playlist')) {
-                sessionStorage.setItem('pendingShareURL', window.location.search);
-            }
+            // Handle offline mode
+            loadingStatus.textContent = 'Working offline...';
+            await authManager.init();
         }
         
-        // Make managers globally available for debugging
+        // Initialize upload manager
+        uploadManager.init();
+        
+        // Setup global drag and drop
+        setupGlobalDragDrop();
+        
+        // Make managers and components globally available
         window.api = api;
         window.authManager = authManager;
         window.contentManager = contentManager;
@@ -166,6 +198,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.albumView = albumView;
         window.getAllFilesFromDrop = getAllFilesFromDrop;
         window.errorHandler = errorHandler;
+        window.offlineManager = offlineManager;
+        window.player = player;
+        window.visualizer = visualizer;
+        window.playlistManager = playlistManager;
+        window.themeSwitcher = themeSwitcher;
+        window.shareManager = shareManager;
+        window.metadataEditor = metadataEditor;
+        window.contextMenu = contextMenu;
+        
+        // Setup visualizer button after components are available
+        setupVisualizerButton();
+        
+        // Hide loading overlay faster - don't wait for all content
+        loadingStatus.textContent = 'Ready!';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+        }, 100);
         
         // Loading overlay will be hidden when theme is ready
         
@@ -194,53 +243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
         
-        // Initialize upload manager
-        uploadManager.init();
-        
-        // Setup global drag and drop
-        setupGlobalDragDrop();
-        
-        // Initialize components
-        const metadataEditor = new MetadataEditor(api, toast);
-        const contextMenu = new ContextMenu(api, toast, metadataEditor);
-        player = new Player();
-        const nowPlayingPopup = new NowPlayingPopup();
-        const responsiveHandler = new ResponsiveHandler();
-        const userMenu = new UserMenu(toast);
-        const cardHover = new CardHover();
-        albumView = new AlbumView(api, toast);
-        const themeSwitcher = new ThemeSwitcher();
-        const visualizer = new Visualizer();
-        playlistManager = new PlaylistManager(api, toast);
-        const shareManager = new ShareManager(api, toast);
-        
-        // Wait for theme to be ready before hiding loading
-        themeSwitcher.onReady(() => {
-            loadingOverlay.style.display = 'none';
-        });
-        
-        // Setup visualizer button with event delegation
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('#visualizerButton')) {
-                console.log('Visualizer button clicked');
-                if (player && player.audio && !player.audio.paused && player.audio.src) {
-                    console.log('Showing visualizer');
-                    visualizer.show(player);
-                } else {
-                    console.log('Showing toast');
-                    toast.show('Play a song to use the visualizer');
-                }
-            }
-        });
-        
-        // Make components globally accessible
-        window.player = player;
-        window.albumView = albumView;
-        window.visualizer = visualizer;
-        window.playlistManager = playlistManager;
-        window.themeSwitcher = themeSwitcher;
-        window.shareManager = shareManager;
-        // uploadModal disabled - using new upload manager
+
     
     // Setup logout handler
     const logoutButton = document.getElementById('logoutButton');
@@ -288,6 +291,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     function showHomeSections() {
         if (contentManager) {
             contentManager.showHomeSections();
+        }
+    }
+    
+    // Setup visualizer button handler
+    function setupVisualizerButton() {
+        // Remove any existing listeners first
+        const existingHandler = document.querySelector('#visualizerButton');
+        if (existingHandler) {
+            existingHandler.removeEventListener('click', handleVisualizerClick);
+        }
+        
+        // Add new listener
+        document.addEventListener('click', handleVisualizerClick);
+    }
+    
+    function handleVisualizerClick(e) {
+        if (e.target.closest('#visualizerButton')) {
+            console.log('Visualizer button clicked');
+            if (window.player && window.player.audio && !window.player.audio.paused && window.player.audio.src) {
+                console.log('Showing visualizer');
+                if (window.visualizer) {
+                    window.visualizer.show(window.player);
+                }
+            } else {
+                console.log('Showing toast');
+                if (window.toast) {
+                    window.toast.show('Play a song to use the visualizer');
+                } else {
+                    toast.show('Play a song to use the visualizer');
+                }
+            }
         }
     }
     

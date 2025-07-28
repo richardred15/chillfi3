@@ -775,8 +775,8 @@ function startCLI() {
         console.log(`Artists: ${artistCount.count}`);
         console.log(`Playlists: ${playlistCount.count}`);
         console.log(`Total Listens: ${listenCount.count}`);
-        console.log(`Active Upload Sessions: ${uploadSessions.size}`);
-        console.log(`Active Image Uploads: ${imageUploadSessions.size}`);
+        console.log(`Active Upload Sessions: ${uploadSessions ? uploadSessions.size : 0}`);
+        console.log(`Active Image Uploads: ${imageUploadSessions ? imageUploadSessions.size : 0}`);
 
         // Memory usage
         const memUsage = process.memoryUsage();

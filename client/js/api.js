@@ -37,6 +37,10 @@ class API {
                 this.connected = true;
                 this.reconnectAttempts = 0;
                 console.log("Connected to server");
+                // Trigger online mode
+                if (window.offlineManager) {
+                    window.offlineManager.handleOnline();
+                }
                 if (this.onConnectionChange) {
                     this.onConnectionChange(true);
                 }
@@ -49,6 +53,7 @@ class API {
                 if (this.onConnectionChange) {
                     this.onConnectionChange(false);
                 }
+                // Don't immediately trigger offline mode - wait for reconnect attempts
                 this.attemptReconnect();
             });
 
@@ -70,12 +75,18 @@ class API {
     emit(event, data = {}) {
         return new Promise((resolve, reject) => {
             if (!this.connected) {
+                // Try offline fallback
+                const offlineResult = this.handleOfflineRequest(event, data);
+                if (offlineResult) {
+                    resolve(offlineResult);
+                    return;
+                }
                 reject(new Error("Not connected to server"));
                 return;
             }
 
             // Use longer timeout for upload operations, shorter for others
-            const timeoutDuration = event.includes("upload") ? 300000 : 30000; // 5 min for uploads, 30s for others
+            const timeoutDuration = event.includes("upload") ? 300000 : 10000; // 5 min for uploads, 10s for others
             const timeout = setTimeout(() => {
                 reject(new Error("Request timeout"));
             }, timeoutDuration);
@@ -200,11 +211,64 @@ class API {
 
     // Song methods
     async getSongs(filters = {}, page = 1, limit = 20) {
-        return await this.emit("song:list", { filters, page, limit });
+        try {
+            const result = await this.emit("song:list", {
+                filters,
+                page,
+                limit,
+            });
+
+            // Cache songs for offline use - handle paginated response structure
+            if (
+                window.offlineManager &&
+                result.success &&
+                result.data &&
+                result.data.items
+            ) {
+                result.data.items.forEach((song) =>
+                    window.offlineManager.cacheSong(song)
+                );
+            }
+            return result;
+        } catch (error) {
+            // Return cached songs if offline
+            if (window.offlineManager && !window.offlineManager.isOnline) {
+                const cachedSongs = window.offlineManager.getOfflineLibrary();
+                return {
+                    success: true,
+                    data: {
+                        items: cachedSongs,
+                        pagination: {
+                            total: cachedSongs.length,
+                            page: 1,
+                            limit: cachedSongs.length,
+                            totalPages: 1,
+                        },
+                    },
+                    offline: true,
+                };
+            }
+            throw error;
+        }
     }
 
     async getSong(songId) {
-        return await this.emit("song:get", { songId });
+        try {
+            const result = await this.emit("song:get", { songId });
+            
+            // Cache the song for offline use
+            if (window.offlineManager && result.success && result.data && result.data.song) {
+                window.offlineManager.cacheSong(result.data.song);
+            }
+            
+            return result;
+        } catch (error) {
+            // Return cached song if offline
+            if (window.offlineManager && !window.offlineManager.isOnline) {
+                return this.handleOfflineRequest('song:get', { songId });
+            }
+            throw error;
+        }
     }
 
     async updateSong(songId, metadata) {
@@ -220,11 +284,42 @@ class API {
     }
 
     async playSong(songId) {
-        return await this.emit("song:play", { songId });
+        try {
+            const result = await this.emit("song:play", { songId });
+            
+            // Cache the song metadata for offline use
+            if (window.offlineManager && result.success && result.metadata) {
+                window.offlineManager.cacheSong({
+                    id: result.metadata.id,
+                    title: result.metadata.title,
+                    artist: result.metadata.artist,
+                    album: result.metadata.album,
+                    duration: result.metadata.duration,
+                    // Add other metadata if available
+                    ...result.metadata
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            throw error;
+        }
     }
 
     async recordListen(songId) {
-        return await this.emit("song:recordListen", { songId });
+        try {
+            return await this.emit("song:recordListen", { songId });
+        } catch (error) {
+            // Queue for offline sync
+            if (window.offlineManager) {
+                window.offlineManager.queueAction({
+                    type: "recordListen",
+                    songId: songId,
+                });
+                return { success: true, queued: true };
+            }
+            throw error;
+        }
     }
 
     async getSongListens(songId) {
@@ -240,18 +335,51 @@ class API {
     }
 
     async getAlbums(page = 1, limit = 20) {
-        return await this.emit("albums:list", { page, limit });
+        try {
+            const result = await this.emit("albums:list", { page, limit });
+            return result;
+        } catch (error) {
+            // Return cached albums if offline
+            if (window.offlineManager && !window.offlineManager.isOnline) {
+                return this.handleOfflineRequest("albums:list", {
+                    page,
+                    limit,
+                });
+            }
+            throw error;
+        }
     }
 
     // Playlist methods
     async getPlaylists(userId = null, page = 1, limit = 20) {
-        // If no userId provided, use current user
-        const targetUserId = userId || (this.user ? this.user.id : null);
-        return await this.emit("playlist:list", {
-            userId: targetUserId,
-            page,
-            limit,
-        });
+        try {
+            // If no userId provided, use current user
+            const targetUserId = userId || (this.user ? this.user.id : null);
+            return await this.emit("playlist:list", {
+                userId: targetUserId,
+                page,
+                limit,
+            });
+        } catch (error) {
+            // Return empty playlists if offline or not connected
+            if (!this.connected || (window.offlineManager && !window.offlineManager.isOnline)) {
+                const offlinePlaylists = window.offlineManager ? window.offlineManager.getOfflinePlaylists() : [];
+                return {
+                    success: true,
+                    data: {
+                        items: offlinePlaylists,
+                        pagination: {
+                            total: offlinePlaylists.length,
+                            page: 1,
+                            limit: offlinePlaylists.length,
+                            totalPages: 1
+                        }
+                    },
+                    offline: true
+                };
+            }
+            throw error;
+        }
     }
 
     async getPlaylist(playlistId, songPage = 1, songLimit = 50) {
@@ -319,7 +447,14 @@ class API {
 
     attemptReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.log("Max reconnection attempts reached");
+            console.log(
+                "Max reconnection attempts reached - switching to offline mode"
+            );
+            this.socket.disconnect();
+            // Trigger offline mode instead of reload button
+            if (window.offlineManager) {
+                window.offlineManager.handleOffline();
+            }
             return;
         }
 
@@ -333,6 +468,115 @@ class API {
                 this.socket.connect();
             }
         }, this.reconnectDelay);
+    }
+
+    // Handle offline requests
+    handleOfflineRequest(event, data) {
+        if (!window.offlineManager) return null;
+
+        switch (event) {
+            case "song:list":
+                let cachedSongs = window.offlineManager.getOfflineLibrary();
+
+                // Apply filters for offline content
+                if (data.filters) {
+                    if (data.filters.artist) {
+                        cachedSongs = cachedSongs.filter(
+                            (song) => song.artist === data.filters.artist
+                        );
+                    }
+                    if (data.filters.album) {
+                        cachedSongs = cachedSongs.filter(
+                            (song) => song.album === data.filters.album
+                        );
+                    }
+                    if (data.filters.search) {
+                        const searchTerm = data.filters.search.toLowerCase();
+                        cachedSongs = cachedSongs.filter(
+                            (song) =>
+                                song.title
+                                    ?.toLowerCase()
+                                    .includes(searchTerm) ||
+                                song.artist
+                                    ?.toLowerCase()
+                                    .includes(searchTerm) ||
+                                song.album?.toLowerCase().includes(searchTerm)
+                        );
+                    }
+                }
+
+                return {
+                    success: true,
+                    data: {
+                        items: cachedSongs,
+                        pagination: {
+                            total: cachedSongs.length,
+                            page: 1,
+                            limit: cachedSongs.length,
+                            totalPages: 1,
+                        },
+                    },
+                    offline: true,
+                };
+
+            case "albums:list":
+                const allCachedSongs =
+                    window.offlineManager.getOfflineLibrary();
+                const albumsMap = new Map();
+
+                // Group songs by album
+                allCachedSongs.forEach((song) => {
+                    if (song.album && song.album_id) {
+                        if (!albumsMap.has(song.album_id)) {
+                            albumsMap.set(song.album_id, {
+                                id: song.album_id,
+                                title: song.album,
+                                artist: song.artist,
+                                cover_art_url: song.cover_art_url,
+                                song_count: 0,
+                            });
+                        }
+                        albumsMap.get(song.album_id).song_count++;
+                    }
+                });
+
+                const albums = Array.from(albumsMap.values());
+                return {
+                    success: true,
+                    data: {
+                        items: albums,
+                        pagination: {
+                            total: albums.length,
+                            page: 1,
+                            limit: albums.length,
+                            totalPages: 1,
+                        },
+                    },
+                    offline: true,
+                };
+
+            case "song:get":
+                const song = window.offlineManager.getCachedSong(data.songId);
+                if (song) {
+                    return { success: true, data: { song }, offline: true };
+                }
+                break;
+
+            case "song:recentlyPlayed":
+                const recentSongs = window.offlineManager
+                    .getOfflineLibrary()
+                    .slice(0, data.limit || 10);
+                return {
+                    success: true,
+                    data: {
+                        songs: recentSongs,
+                        total: recentSongs.length,
+                    },
+                    offline: true,
+                };
+        }
+
+        return null;
     }
 
     // Event listeners

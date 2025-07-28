@@ -1,66 +1,181 @@
-// Service Worker for Cache Busting
-let currentVersion = '1.0.1'; // Default version
+// Service Worker for ChillFi3 - Cache Busting + Offline Support
+const CACHE_NAME = 'chillfi3-v3';
+const API_CACHE_NAME = 'chillfi3-api-v2';
+const AUDIO_CACHE_NAME = 'chillfi3-audio-v2';
 
-// Fetch version from server on install
+let currentVersion = '1.0.1';
+
+const STATIC_ASSETS = [
+    '/',
+    '/index.php',
+    '/client/css/style.css',
+    '/client/js/app.js',
+    '/client/js/api.js',
+    '/client/js/offline.js',
+    '/client/icons/play.svg',
+    '/client/icons/pause.svg',
+    '/client/icons/next.svg',
+    '/client/icons/previous.svg',
+    '/favicon.ico'
+];
+
+// Install - cache static assets
 self.addEventListener('install', (event) => {
     console.log('Service Worker: Installing...');
     event.waitUntil(
-        fetch('/api/health')
-            .then(() => {
-                console.log('Service Worker: Installed');
-                self.skipWaiting();
-            })
-            .catch(() => {
-                console.log('Service Worker: Installed (offline)');
-                self.skipWaiting();
-            })
+        Promise.all([
+            caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)),
+            fetch('/api/health').catch(() => {})
+        ]).then(() => {
+            console.log('Service Worker: Installed');
+            self.skipWaiting();
+        })
     );
 });
 
+// Activate - clean old caches
 self.addEventListener('activate', (event) => {
     console.log('Service Worker: Activating...');
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME && 
+                        cacheName !== API_CACHE_NAME && 
+                        cacheName !== AUDIO_CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
-// Listen for messages from main thread
+// Listen for version updates and cache control
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'VERSION_UPDATE') {
         currentVersion = event.data.version;
         console.log('Service Worker: Version updated to', currentVersion);
+    } else if (event.data && event.data.type === 'CLEAR_CACHE') {
+        // Clear all caches when requested
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+        }).then(() => {
+            console.log('Service Worker: All caches cleared');
+            // Notify client that cache is cleared
+            self.clients.matchAll().then(clients => {
+                clients.forEach(client => {
+                    client.postMessage({ type: 'CACHE_CLEARED' });
+                });
+            });
+        });
     }
 });
 
-// Intercept fetch requests
+// Fetch handler with offline support
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     
-    // Only process requests to our domain
-    if (url.origin !== location.origin) {
-        return;
-    }
+    if (url.origin !== location.origin) return;
     
-    // Skip upload requests (they have FormData bodies that can't be cloned)
-    if (url.pathname.startsWith('/api/upload')) {
-        return;
-    }
-    
-    // Apply cache busting to all other requests
-    if (!url.searchParams.has('v')) {
-        const requestInit = {
-            method: event.request.method,
-            headers: event.request.headers,
-            body: event.request.body,
-            credentials: event.request.credentials,
-            cache: 'no-cache'
-        };
-        
-        // Don't include mode if it's 'navigate' as it's not allowed in Request constructor
-        if (event.request.mode !== 'navigate') {
-            requestInit.mode = event.request.mode;
-        }
-        
-        event.respondWith(
-            fetch(new Request(event.request.url + (url.search ? '&' : '?') + 'v=' + currentVersion, requestInit))
-        );
+    // Handle different request types
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(handleApiRequest(event.request));
+    } else if (url.pathname.includes('.mp3') || url.pathname.includes('.m4a')) {
+        event.respondWith(handleAudioRequest(event.request));
+    } else {
+        event.respondWith(handleStaticRequest(event.request, url));
     }
 });
+
+// Handle static requests with cache busting
+async function handleStaticRequest(request, url) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    
+    // Check if this is a hard refresh (cache: 'reload' or pragma: no-cache)
+    const isHardRefresh = request.cache === 'reload' || 
+                         request.headers.get('pragma') === 'no-cache' ||
+                         request.headers.get('cache-control') === 'no-cache';
+    
+    try {
+        // Apply cache busting if no version param
+        let fetchUrl = request.url;
+        if (!url.searchParams.has('v')) {
+            fetchUrl += (url.search ? '&' : '?') + 'v=' + currentVersion;
+        }
+        
+        // Always fetch from network on hard refresh, otherwise try cache first
+        if (isHardRefresh || !cached) {
+            const response = await fetch(fetchUrl, { cache: 'no-cache' });
+            if (response.status === 200) {
+                // Update cache with fresh content
+                cache.put(request, response.clone());
+            }
+            return response;
+        } else {
+            // Try network first, fallback to cache
+            try {
+                const response = await fetch(fetchUrl, { cache: 'no-cache' });
+                if (response.status === 200) {
+                    cache.put(request, response.clone());
+                }
+                return response;
+            } catch (networkError) {
+                return cached;
+            }
+        }
+    } catch (error) {
+        return cached || new Response('Offline', { status: 503 });
+    }
+}
+
+// Handle API requests with caching
+async function handleApiRequest(request) {
+    // Skip upload requests
+    if (request.url.includes('/upload')) {
+        return fetch(request);
+    }
+    
+    const cache = await caches.open(API_CACHE_NAME);
+    
+    try {
+        const response = await fetch(request);
+        if (response.status === 200 && request.method === 'GET') {
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        const cached = await cache.match(request);
+        if (cached) {
+            return cached;
+        }
+        return new Response(JSON.stringify({ error: 'Offline' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// Handle audio requests with selective caching
+async function handleAudioRequest(request) {
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    const cached = await cache.match(request);
+    
+    if (cached) return cached;
+    
+    try {
+        const response = await fetch(request);
+        if (response.status === 200) {
+            const contentLength = response.headers.get('content-length');
+            if (contentLength && parseInt(contentLength) < 50 * 1024 * 1024) {
+                cache.put(request, response.clone());
+            }
+        }
+        return response;
+    } catch (error) {
+        return new Response('Audio unavailable offline', { status: 503 });
+    }
+}
