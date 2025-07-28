@@ -1,12 +1,8 @@
 /**
  * Configuration Management
  */
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const path = require("path");
+const dotenv = require("dotenv");
 
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
@@ -64,4 +60,4 @@ const config = {
     isProduction: process.env.NODE_ENV === "production",
 };
 
-export default config;
+module.exports = config;

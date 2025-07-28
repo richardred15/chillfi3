@@ -891,13 +891,13 @@ function startCLI() {
     }
 
     async function backupDatabase(filename) {
-        const { execSync } = require("child_process");
+        const { spawnSync } = require("child_process");
+        const fs = require("fs");
         const backupFile =
             filename ||
             `chillfi3_backup_${new Date().toISOString().slice(0, 10)}.sql`;
         console.log(`Creating backup: ${backupFile}`);
         try {
-            const { spawnSync } = require("child_process");
             const mysqldumpArgs = [
                 "-h",
                 config.database.host,
@@ -908,7 +908,6 @@ function startCLI() {
                 "--set-gtid-purged=OFF",
                 config.database.database,
             ];
-            const fs = require("fs");
             const out = fs.openSync(backupFile, "w");
             const dump = spawnSync("mysqldump", mysqldumpArgs, {
                 stdio: ["ignore", out, "ignore"],
@@ -916,24 +915,7 @@ function startCLI() {
             fs.closeSync(out);
             if (dump.error) throw dump.error;
             if (dump.status !== 0) throw new Error("mysqldump failed");
-            const { spawnSync } = require("child_process");
-            const fs = require("fs");
-            const mysqlArgs = [
-                "-h",
-                config.database.host,
-                "-u",
-                config.database.user,
-                `-p${config.database.password}`,
-                config.database.database,
-            ];
-            const sqlStream = fs.createReadStream(filename);
-            const mysqlProc = spawnSync("mysql", mysqlArgs, {
-                input: fs.readFileSync(filename),
-            });
-            if (mysqlProc.error) throw mysqlProc.error;
-            if (mysqlProc.status !== 0)
-                throw new Error(mysqlProc.stderr.toString());
-            console.log("✅ Restore completed!");
+            console.log("✅ Backup completed!");
         } catch (error) {
             console.error("❌ Backup failed:", error.message);
         }
