@@ -592,13 +592,10 @@ class UploadManager {
         if (currentFileName) currentFileName.textContent = fileName;
         
         if (progressBar) {
-            // Only update progress if not paused/failed
-            if (chunkProgress > 0) {
-                const completedFiles = current - 1;
-                const currentFileProgress = chunkProgress / 100;
-                const totalProgress = ((completedFiles + currentFileProgress) / total) * 100;
-                progressBar.style.width = `${totalProgress}%`;
-            }
+            const completedFiles = current - 1;
+            const currentFileProgress = chunkProgress / 100;
+            const totalProgress = ((completedFiles + currentFileProgress) / total) * 100;
+            progressBar.style.width = `${Math.max(0, totalProgress)}%`;
         }
     }
 
