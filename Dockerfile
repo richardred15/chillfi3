@@ -3,8 +3,8 @@ FROM node:18-alpine AS server-deps
 
 # Install server dependencies
 WORKDIR /app/server
-COPY server/package*.json ./
-RUN npm ci --only=production
+COPY server/package.json ./
+RUN npm install --only=production
 
 # Production image
 FROM php:8.2-fpm-alpine
