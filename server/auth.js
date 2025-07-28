@@ -35,10 +35,7 @@ function verifyToken(token) {
     }
 }
 
-// Generate reset token
-function generateResetToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
+
 
 // Socket.IO authentication middleware
 function authenticateSocket(socket, next) {
@@ -77,7 +74,7 @@ function authenticateSocket(socket, next) {
 }
 
 // Handle socket events
-function handleSocket(socket, io) {
+function handleSocket(socket, _io) {
     // Login
     socket.on('auth:login', async (data) => {
         console.log('Login attempt:', { username: data?.username, hasPassword: !!data?.password });
@@ -195,14 +192,13 @@ function handleSocket(socket, io) {
             }
             
             let passwordHash = null;
-            let resetToken = null;
             
             if (password) {
                 passwordHash = await bcrypt.hash(password, 10);
             }
             
             // Create user
-            const result = await database.query(
+            await database.query(
                 'INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
                 [username, passwordHash, isAdmin || false]
             );
