@@ -41,7 +41,6 @@ describe('Database', () => {
             
             expect(sql).toContain('CREATE TABLE IF NOT EXISTS users');
             expect(sql).toContain('id INT AUTO_INCREMENT');
-            expect(sql).not.toContain('NOT NULL'); // Primary key columns don't need explicit NOT NULL
             expect(sql).toContain('username VARCHAR(255) NOT NULL UNIQUE');
             expect(sql).toContain('PRIMARY KEY (id)');
         });
