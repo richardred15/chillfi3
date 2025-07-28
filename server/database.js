@@ -92,7 +92,102 @@ async function createTablesFromSchema() {
         }
     }
 
+    // Run schema migrations for existing tables
+    await runSchemaMigrations();
+
     console.log('Database tables created/verified from schema');
+}
+
+// Run schema migrations for existing tables
+async function runSchemaMigrations() {
+    try {
+        // Get current database structure
+        const currentSchema = await getCurrentDatabaseSchema();
+        
+        // Compare with target schema and generate migrations
+        const migrations = generateMigrations(currentSchema, schema);
+        
+        // Execute migrations
+        for (const migration of migrations) {
+            try {
+                console.log('Running migration:', migration.description);
+                await pool.execute(migration.sql);
+                console.log('Migration completed:', migration.description);
+            } catch (error) {
+                console.error('Migration failed:', migration.description, error.message);
+                // Continue with other migrations
+            }
+        }
+    } catch (error) {
+        console.error('Schema migration error:', error.message);
+        // Don't throw - continue with startup
+    }
+}
+
+// Get current database schema
+async function getCurrentDatabaseSchema() {
+    const [tables] = await pool.execute(
+        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?",
+        [dbConfig.database]
+    );
+    
+    const currentSchema = {};
+    
+    for (const table of tables) {
+        const tableName = table.TABLE_NAME;
+        const [columns] = await pool.execute(
+            "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+            [dbConfig.database, tableName]
+        );
+        
+        currentSchema[tableName] = {
+            columns: {}
+        };
+        
+        for (const column of columns) {
+            currentSchema[tableName].columns[column.COLUMN_NAME] = {
+                type: column.DATA_TYPE,
+                nullable: column.IS_NULLABLE === 'YES',
+                default: column.COLUMN_DEFAULT
+            };
+        }
+    }
+    
+    return currentSchema;
+}
+
+// Generate migrations by comparing schemas
+function generateMigrations(currentSchema, targetSchema) {
+    const migrations = [];
+    
+    for (const [tableName, tableSchema] of Object.entries(targetSchema.tables)) {
+        if (!currentSchema[tableName]) {
+            // Table doesn't exist - will be created by CREATE TABLE IF NOT EXISTS
+            continue;
+        }
+        
+        // Check for missing columns
+        for (const [columnName, columnSchema] of Object.entries(tableSchema.columns)) {
+            if (!currentSchema[tableName].columns[columnName]) {
+                // Column is missing - add it
+                let columnDef = `${columnSchema.type}`;
+                
+                if (columnSchema.notNull || columnSchema.nullable === false) {
+                    columnDef += ' NOT NULL';
+                }
+                if (columnSchema.default !== undefined) {
+                    columnDef += ` DEFAULT ${columnSchema.default}`;
+                }
+                
+                migrations.push({
+                    description: `Add column ${columnName} to table ${tableName}`,
+                    sql: `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`
+                });
+            }
+        }
+    }
+    
+    return migrations;
 }
 
 function generateSchemaSQL(schema) {
@@ -212,4 +307,5 @@ module.exports = {
     query,
     cleanup,
     generateSchemaSQL,
+    runSchemaMigrations,
 };

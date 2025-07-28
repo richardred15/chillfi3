@@ -336,6 +336,84 @@ function handleSocket(socket, _io) {
             });
         }
     });
+
+    // Update user theme
+    socket.on('user:updateTheme', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return socket.emit('user:updateTheme', { 
+                    success: false, 
+                    message: 'Authentication required' 
+                });
+            }
+            
+            const { theme } = data;
+            
+            if (!theme || typeof theme !== 'string') {
+                return socket.emit('user:updateTheme', { 
+                    success: false, 
+                    message: 'Valid theme name required' 
+                });
+            }
+            
+            // Validate theme name (basic validation)
+            const validThemes = ['default', 'dark', 'ocean', 'spotify', 'sunset', 'synthwave'];
+            if (!validThemes.includes(theme)) {
+                return socket.emit('user:updateTheme', { 
+                    success: false, 
+                    message: 'Invalid theme name' 
+                });
+            }
+            
+            await database.query(
+                'UPDATE users SET theme = ? WHERE id = ?',
+                [theme, socket.user.id]
+            );
+            
+            socket.emit('user:updateTheme', {
+                success: true,
+                theme
+            });
+            
+        } catch (error) {
+            console.error('Update user theme error:', error);
+            socket.emit('user:updateTheme', { 
+                success: false, 
+                message: 'Failed to update theme' 
+            });
+        }
+    });
+
+    // Get user theme
+    socket.on('user:getTheme', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return socket.emit('user:getTheme', { 
+                    success: false, 
+                    message: 'Authentication required' 
+                });
+            }
+            
+            const users = await database.query(
+                'SELECT theme FROM users WHERE id = ?',
+                [socket.user.id]
+            );
+            
+            const theme = users.length > 0 ? users[0].theme || 'default' : 'default';
+            
+            socket.emit('user:getTheme', {
+                success: true,
+                theme
+            });
+            
+        } catch (error) {
+            console.error('Get user theme error:', error);
+            socket.emit('user:getTheme', { 
+                success: false, 
+                message: 'Failed to get theme' 
+            });
+        }
+    });
 }
 
 module.exports = {

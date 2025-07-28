@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "database": "musiclib",
   "tables": {
     "users": {
@@ -41,6 +41,11 @@
         "is_admin": {
           "type": "BOOLEAN",
           "default": false
+        },
+        "theme": {
+          "type": "VARCHAR(50)",
+          "default": "'default'",
+          "nullable": true
         }
       },
       "indexes": [

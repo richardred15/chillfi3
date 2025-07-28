@@ -222,6 +222,14 @@ class API {
         return await this.emit("user:getUploads", { userId, page, limit });
     }
 
+    async updateUserTheme(theme) {
+        return await this.emit("user:updateTheme", { theme });
+    }
+
+    async getUserTheme() {
+        return await this.emit("user:getTheme", {});
+    }
+
     // Song methods
     async getSongs(filters = {}, page = 1, limit = 20) {
         try {

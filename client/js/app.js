@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const offlineManager = new OfflineManager();
 
     // Initialize API connection
-    const api = new API();
+    //const api = new API();
 
     // Setup loading handling
     const loadingOverlay = document.getElementById("loadingOverlay");
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const connectionPromise = (async () => {
             try {
                 loadingStatus.textContent = "Connecting to server...";
-                await api.connect();
+                await window.api.connect();
                 console.log("Connected to ChillFi3 server");
                 return true;
             } catch (error) {
@@ -95,10 +95,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         // Initialize core managers first
         loadingStatus.textContent = "Initializing components...";
-        authManager = new AuthManager(api, toast);
-        contentManager = new ContentManager(api, toast);
-        uploadManager = new UploadManager(api, toast);
-        adminManager = new AdminManager(api, toast);
+        authManager = new AuthManager(window.api, toast);
+        contentManager = new ContentManager(window.api, toast);
+        uploadManager = new UploadManager(window.api, toast);
+        adminManager = new AdminManager(window.api, toast);
 
         // Wait for connection result before initializing components that need API
         const connected = await connectionPromise;
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const shareManager = new ShareManager(api, toast);
 
         // Setup connection change handler now that managers exist
-        api.onConnectionChange = (connected) => {
+        window.api.onConnectionChange = (connected) => {
             if (connected) {
                 loadingOverlay.style.display = "none";
 
@@ -178,7 +178,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             // Fetch version in background (non-blocking)
-            api.getVersion()
+            window.api
+                .getVersion()
                 .then((versionResponse) => {
                     console.log("Server version:", versionResponse.version);
 
@@ -452,7 +453,9 @@ document.addEventListener("DOMContentLoaded", async function () {
             e.preventDefault();
             contentManager.showMyLibrary();
             // Update URL for library with current user
-            URLManager.setURL({ library: api.user?.username || "current" });
+            URLManager.setURL({
+                library: window.api.user?.username || "current",
+            });
         });
     }
 

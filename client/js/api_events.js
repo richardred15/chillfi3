@@ -1,6 +1,12 @@
 class APIEvents {
     constructor() {
-        this.validEvents = ['authenticated', 'logout', 'connection', 'error', 'upload'];
+        this.validEvents = [
+            "authenticated",
+            "logout",
+            "connection",
+            "error",
+            "upload",
+        ];
         this.events = new Map();
     }
 
@@ -26,20 +32,21 @@ class APIEvents {
     }
 
     on(event, handler) {
-        console.log(`Registering handler for event: ${event}`);
-        console.log(`Handler type: ${typeof handler}`);
         if (typeof event !== "string" || typeof handler !== "function") {
             console.error(
                 "on() requires a string event name and a function handler"
             );
             return;
         }
-        
+
         if (!this.validEvents.includes(event)) {
-            console.warn(`Event '${event}' is not in the list of valid events. Adding anyway.`);
+            console.warn(
+                `Event '${event}' is not in the list of valid events. Adding anyway.`
+            );
         }
-        
+        //console.log(this.events.keys());
         if (!this.events.has(event)) {
+            console.log(`Creating new event: ${event}`);
             this.events.set(event, []);
         }
         this.events.get(event).push(handler);
@@ -52,7 +59,7 @@ class APIEvents {
             );
             return;
         }
-        
+
         const wrapper = (...args) => {
             handler(...args);
             this.off(event, wrapper);
@@ -67,12 +74,12 @@ class APIEvents {
             );
             return;
         }
-        
+
         if (!this.events.has(event)) {
             console.error(`Event ${event} has no registered handlers`);
             return;
         }
-        
+
         const handlers = this.events.get(event);
         const index = handlers.indexOf(handler);
         if (index > -1) {
