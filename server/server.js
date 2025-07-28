@@ -13,7 +13,7 @@ const helmet = require('helmet');
 // Import modules
 const config = require('./config');
 const database = require('./database');
-const songService = require('./services/songService');
+// const songService = require('./services/songService');
 const auth = require('./auth');
 const songs = require('./songs');
 const users = require('./users');
@@ -348,7 +348,7 @@ io.on('connection', (socket) => {
     socket.loadedHandlers = new Set();
 
     // Lazy load handlers on first event of each namespace
-    socket.onAny((eventName, ...args) => {
+    socket.onAny((eventName, ..._args) => {
         const namespace = eventName.split(':')[0];
 
         if (
@@ -479,9 +479,9 @@ function startCLI() {
     });
 
     // Override console methods to maintain prompt
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
+    // const originalLog = console.log;
+    // const originalError = console.error;
+    // const originalWarn = console.warn;
 
     function writeWithPrompt(...args) {
         readline.clearLine(process.stdout, 0);
@@ -848,6 +848,7 @@ function startCLI() {
         console.log('Setting up database with schema...');
         try {
             const { generateSchemaSQL } = require('./database');
+            const schema = require('./schema.json');
             const sql = generateSchemaSQL(schema);
             await database.query(sql);
             console.log('✅ Database setup completed!');
@@ -872,6 +873,7 @@ function startCLI() {
                 );
             }
 
+            const schema = require('./schema.json');
             if (currentVersion === schema.version) {
                 console.log('✅ Database is up to date!');
                 return;

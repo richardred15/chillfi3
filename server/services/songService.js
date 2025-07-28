@@ -2,7 +2,7 @@
  * Song Service
  */
 const database = require('../database');
-const { validate } = require('../utils/validation');
+// const { validate } = require('../utils/validation');
 
 async function getSongs(filters = {}, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
