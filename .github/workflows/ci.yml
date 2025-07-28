@@ -30,21 +30,53 @@ jobs:
         cache: 'npm'
         cache-dependency-path: server/package.json
     
-    - name: Install dependencies
+    - name: Install server dependencies
       run: |
         cd server
         npm install
     
-    - name: Run tests
+    - name: Install client dependencies
+      run: |
+        cd client
+        npm install
+    
+    - name: Run linting
       run: |
         cd server
-        npm test
+        npm run lint
+    
+    - name: Run server tests with coverage
+      run: |
+        cd server
+        npm run test:coverage
       env:
         DB_HOST: 127.0.0.1
         DB_USER: root
         DB_PASSWORD: root
         DB_NAME: musiclib_test
         JWT_SECRET: test_secret
+    
+    - name: Run integration tests
+      run: |
+        cd server
+        npm run test:integration
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: musiclib_test
+        JWT_SECRET: test_secret
+    
+    - name: Run client tests
+      run: |
+        cd client
+        npm test
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./server/coverage
+        fail_ci_if_error: false
 
   build:
     needs: test
@@ -112,6 +144,11 @@ jobs:
       run: |
         cd server
         npm audit --audit-level moderate || true
+    
+    - name: Check for known vulnerabilities
+      run: |
+        cd server
+        npx audit-ci --moderate
     
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
