@@ -66,16 +66,16 @@ npm install
 npm install -g npm@9
 ```
 
-**Database setup fails**
+**Database connection fails**
 ```bash
 # Check MySQL service
 sudo systemctl status mysql
 
-# Reset MySQL root password
+# Reset MySQL root password if needed
 sudo mysql_secure_installation
 
-# Create database manually
-sudo mysql -e "CREATE DATABASE musiclib CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# Database and tables are created automatically on first run
+# Just ensure MySQL is running and credentials are correct
 ```
 
 ## Runtime Issues
@@ -124,15 +124,13 @@ mysql -e "SHOW GRANTS FOR 'musiclib'@'localhost';"
 
 **Can't login with admin user**
 ```bash
-# Check if admin user exists
-cd server
-echo "list-users" | node server.js
+# Create admin user through web interface
+# 1. Open application in browser
+# 2. Click "Create Account" if no users exist
+# 3. First user automatically becomes admin
 
-# Create admin user
-echo "create-admin admin password123" | node server.js
-
-# Reset admin password
-echo "reset-password admin newpassword" | node server.js
+# If you need to reset, check database directly
+mysql musiclib -e "SELECT id, username, is_admin FROM users;"
 ```
 
 **JWT token errors**

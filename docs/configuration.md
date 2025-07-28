@@ -242,8 +242,10 @@ openssl rand -base64 32
 
 ### Database Security
 
+The application automatically creates the required database and tables. For additional security:
+
 ```sql
--- Remove anonymous users
+-- Remove anonymous users (if they exist)
 DELETE FROM mysql.user WHERE User='';
 
 -- Remove remote root access
@@ -263,7 +265,7 @@ FLUSH PRIVILEGES;
 **Database connection failed:**
 - Verify database credentials in `.env`
 - Check database server is running
-- Ensure database and user exist
+- Database and tables are created automatically on first run
 
 **File uploads failing:**
 - Check `MAX_FILE_SIZE` setting

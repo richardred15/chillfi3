@@ -35,28 +35,18 @@ JWT_SECRET=your_jwt_secret_key
 
 ```bash
 # Build and start
-npm run docker:build
-npm run docker:run
+docker build -t chillfi3 .
+docker-compose up -d
 ```
 
-## 4. Setup Database
+## 4. Access Application
 
-The database is automatically initialized. Create an admin user:
+Open http://localhost in your browser. The database will be created automatically on first run.
 
-```bash
-# Access the container
-docker exec -it chillfi3-app-1 bash
-
-# Inside container
-cd server
-echo "create-admin admin password123" | node server.js
-```
-
-## 5. Access Application
-
-Open http://localhost in your browser and login with:
-- **Username:** admin
-- **Password:** password123
+Create your admin account through the web interface:
+1. Click "Create Account" 
+2. Fill in your details
+3. The first user automatically becomes an admin
 
 ## Next Steps
 

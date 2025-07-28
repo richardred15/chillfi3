@@ -45,12 +45,11 @@ cp .env.client.example .env.client
 # Edit .env.client with your API URL and app name
 ```
 
-4. **Set up database**
+4. **Start the server**
 ```bash
-# Create database and run migrations
 cd server
 npm start
-# Use CLI commands: setup-database, create-admin
+# Database will be created automatically on first run
 ```
 
 5. **Start the application**
@@ -95,7 +94,7 @@ docker-compose up -d
 ```
 
 ### Database Setup
-The database schema is automatically created when the container starts. No manual database setup required!
+The database schema is automatically created when the server starts. Simply ensure your database credentials are correct in the `.env` files.
 
 ## 🔒 HTTPS Setup
 

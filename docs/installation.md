@@ -44,9 +44,9 @@ cp .env.client.example .env.client
 nano server/.env
 nano .env.client
 
-# Deploy
-npm run docker:build
-npm run docker:run
+# Build and run
+docker build -t chillfi3 .
+docker-compose up -d
 ```
 
 ### Method 2: Manual Installation
@@ -67,7 +67,7 @@ sudo yum install nodejs npm php-fpm nginx mysql-server
 git clone https://github.com/richardred15/chillfi3.git
 cd chillfi3
 
-# Install server dependencies
+# Install dependencies
 cd server
 npm install
 cd ..
@@ -76,10 +76,9 @@ cd ..
 cp server/.env.example server/.env
 cp .env.client.example .env.client
 
-# Setup database
-sudo mysql -e "CREATE DATABASE musiclib;"
-sudo mysql -e "CREATE USER 'musiclib'@'localhost' IDENTIFIED BY 'your_password';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON musiclib.* TO 'musiclib'@'localhost';"
+# Edit configuration files with your database credentials
+nano server/.env
+nano .env.client
 
 # Configure web server
 sudo cp docs/examples/nginx.conf /etc/nginx/sites-available/chillfi3
@@ -91,37 +90,18 @@ cd server
 npm start
 ```
 
-### Method 3: LXC Container
 
-```bash
-# Make script executable
-chmod +x scripts/lxc-setup.sh
-
-# Run setup script
-sudo ./scripts/lxc-setup.sh
-```
 
 ## Post-Installation
 
 ### 1. Database Setup
-```bash
-# Docker
-docker exec -it chillfi3-app-1 bash -c "cd server && echo 'setup-database' | node server.js"
-
-# Manual
-cd server
-echo "setup-database" | node server.js
-```
+The database schema is automatically created when the server starts. No manual setup required.
 
 ### 2. Create Admin User
-```bash
-# Docker
-docker exec -it chillfi3-app-1 bash -c "cd server && echo 'create-admin admin password123' | node server.js"
-
-# Manual
-cd server
-echo "create-admin admin password123" | node server.js
-```
+Create an admin user through the web interface:
+1. Open the application in your browser
+2. Click "Create Account" if no users exist
+3. The first user automatically becomes an admin
 
 ### 3. Configure Firewall
 ```bash

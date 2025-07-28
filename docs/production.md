@@ -180,18 +180,16 @@ server {
 
 ### Database Optimization
 
+The database schema and indexes are automatically created. For production optimization:
+
 ```sql
 -- MySQL production settings
 SET GLOBAL innodb_buffer_pool_size = 1073741824; -- 1GB
 SET GLOBAL query_cache_size = 268435456; -- 256MB
 SET GLOBAL max_connections = 200;
 
--- Indexes for performance
-CREATE INDEX idx_songs_uploaded_by ON songs(uploaded_by);
-CREATE INDEX idx_songs_artist_id ON songs(artist_id);
-CREATE INDEX idx_songs_album_id ON songs(album_id);
-CREATE INDEX idx_song_listens_song_id ON song_listens(song_id);
-CREATE INDEX idx_song_listens_user_id ON song_listens(user_id);
+-- Additional indexes can be added if needed
+-- (Basic indexes are created automatically)
 ```
 
 ### Node.js Optimization
