@@ -33,8 +33,8 @@ jest.mock('../config', () => ({
     }
 }));
 
-const { app, io } = require('../server');
-const Client = require('socket.io-client');
+// const { app, io } = require('../server');
+// const Client = require('socket.io-client');
 
 // Mock database
 jest.mock('../database', () => ({
