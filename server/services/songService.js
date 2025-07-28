@@ -1,56 +1,56 @@
 /**
  * Song Service
  */
-const database = require("../database");
-const { validate } = require("../utils/validation");
+const database = require('../database');
+const { validate } = require('../utils/validation');
 
 async function getSongs(filters = {}, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
 
-    let whereClause = "1=1";
+    let whereClause = '1=1';
     let queryParams = [];
 
     // Apply filters
     if (filters.search) {
         whereClause +=
-            " AND (s.title LIKE ? OR a.name LIKE ? OR al.title LIKE ?)";
+            ' AND (s.title LIKE ? OR a.name LIKE ? OR al.title LIKE ?)';
         const searchTerm = `%${filters.search}%`;
         queryParams.push(searchTerm, searchTerm, searchTerm);
     }
 
     if (filters.genre) {
-        whereClause += " AND s.genre = ?";
+        whereClause += ' AND s.genre = ?';
         queryParams.push(filters.genre);
     }
 
     if (filters.artist) {
-        whereClause += " AND a.name = ?";
+        whereClause += ' AND a.name = ?';
         queryParams.push(filters.artist);
     }
 
     if (filters.uploadedBy) {
         if (
-            typeof filters.uploadedBy === "string" &&
+            typeof filters.uploadedBy === 'string' &&
             isNaN(filters.uploadedBy) &&
-            filters.uploadedBy !== "current_user"
+            filters.uploadedBy !== 'current_user'
         ) {
             // Filter by username
-            whereClause += " AND u.username = ?";
+            whereClause += ' AND u.username = ?';
             queryParams.push(filters.uploadedBy);
         } else {
             // Filter by user ID (including 'current_user' which gets converted to ID by caller)
-            whereClause += " AND s.uploaded_by = ?";
+            whereClause += ' AND s.uploaded_by = ?';
             queryParams.push(filters.uploadedBy);
         }
     }
 
     if (filters.album_id) {
-        whereClause += " AND s.album_id = ?";
+        whereClause += ' AND s.album_id = ?';
         queryParams.push(filters.album_id);
     }
 
     if (filters.album) {
-        whereClause += " AND al.title = ?";
+        whereClause += ' AND al.title = ?';
         queryParams.push(filters.album);
     }
 
@@ -113,13 +113,13 @@ async function getSongById(songId) {
 }
 
 async function findOrCreateArtist(artistName, uploadedBy) {
-    if (!artistName || artistName.trim() === "") {
-        artistName = "Unknown Artist";
+    if (!artistName || artistName.trim() === '') {
+        artistName = 'Unknown Artist';
     }
 
     // First try to find existing artist by name and uploader
     let artists = await database.query(
-        "SELECT id FROM artists WHERE name = ? AND created_by = ?",
+        'SELECT id FROM artists WHERE name = ? AND created_by = ?',
         [artistName.trim(), uploadedBy]
     );
 
@@ -129,7 +129,7 @@ async function findOrCreateArtist(artistName, uploadedBy) {
 
     // If not found, create new artist
     const result = await database.query(
-        "INSERT INTO artists (name, created_by) VALUES (?, ?)",
+        'INSERT INTO artists (name, created_by) VALUES (?, ?)',
         [artistName.trim(), uploadedBy]
     );
 
@@ -142,13 +142,13 @@ async function findOrCreateAlbum(
     uploadedBy,
     releaseYear = null
 ) {
-    if (!albumName || albumName.trim() === "") {
-        albumName = "Unknown Album";
+    if (!albumName || albumName.trim() === '') {
+        albumName = 'Unknown Album';
     }
 
     // First try to find existing album by name, artist, and uploader
     let albums = await database.query(
-        "SELECT id FROM albums WHERE title = ? AND artist_id = ? AND created_by = ?",
+        'SELECT id FROM albums WHERE title = ? AND artist_id = ? AND created_by = ?',
         [albumName.trim(), artistId, uploadedBy]
     );
 
@@ -158,7 +158,7 @@ async function findOrCreateAlbum(
 
     // If not found, create new album
     const result = await database.query(
-        "INSERT INTO albums (title, artist_id, release_year, created_by) VALUES (?, ?, ?, ?)",
+        'INSERT INTO albums (title, artist_id, release_year, created_by) VALUES (?, ?, ?, ?)',
         [albumName.trim(), artistId, releaseYear, uploadedBy]
     );
 
@@ -168,23 +168,23 @@ async function findOrCreateAlbum(
 async function updateSong(songId, metadata, userId, isAdmin = false) {
     // Check ownership
     const songs = await database.query(
-        "SELECT uploaded_by FROM songs WHERE id = ?",
+        'SELECT uploaded_by FROM songs WHERE id = ?',
         [songId]
     );
 
     if (songs.length === 0) {
-        throw new Error("Song not found");
+        throw new Error('Song not found');
     }
 
     if (songs[0].uploaded_by !== userId && !isAdmin) {
-        throw new Error("Unauthorized");
+        throw new Error('Unauthorized');
     }
 
     const updateFields = [];
     const updateValues = [];
 
     // Handle direct song fields
-    const allowedFields = ["title", "genre", "track_number"];
+    const allowedFields = ['title', 'genre', 'track_number'];
     for (const field of allowedFields) {
         if (metadata[field] !== undefined) {
             updateFields.push(`${field} = ?`);
@@ -195,7 +195,7 @@ async function updateSong(songId, metadata, userId, isAdmin = false) {
     // Handle artist update
     if (metadata.artist !== undefined) {
         const artistId = await findOrCreateArtist(metadata.artist, userId);
-        updateFields.push("artist_id = ?");
+        updateFields.push('artist_id = ?');
         updateValues.push(artistId);
     }
 
@@ -208,7 +208,7 @@ async function updateSong(songId, metadata, userId, isAdmin = false) {
         } else {
             // Get current artist
             const currentSong = await database.query(
-                "SELECT artist_id FROM songs WHERE id = ?",
+                'SELECT artist_id FROM songs WHERE id = ?',
                 [songId]
             );
             artistId = currentSong[0].artist_id;
@@ -220,14 +220,14 @@ async function updateSong(songId, metadata, userId, isAdmin = false) {
             userId,
             metadata.year
         );
-        updateFields.push("album_id = ?");
+        updateFields.push('album_id = ?');
         updateValues.push(albumId);
     }
 
     if (updateFields.length > 0) {
         updateValues.push(songId);
         await database.query(
-            `UPDATE songs SET ${updateFields.join(", ")} WHERE id = ?`,
+            `UPDATE songs SET ${updateFields.join(', ')} WHERE id = ?`,
             updateValues
         );
     }
@@ -237,31 +237,31 @@ async function updateSong(songId, metadata, userId, isAdmin = false) {
 
 async function deleteSong(songId, userId, isAdmin = false) {
     const songs = await database.query(
-        "SELECT uploaded_by, file_path FROM songs WHERE id = ?",
+        'SELECT uploaded_by, file_path FROM songs WHERE id = ?',
         [songId]
     );
 
     if (songs.length === 0) {
-        throw new Error("Song not found");
+        throw new Error('Song not found');
     }
 
     if (songs[0].uploaded_by !== userId && !isAdmin) {
-        throw new Error("Unauthorized");
+        throw new Error('Unauthorized');
     }
 
-    await database.query("DELETE FROM songs WHERE id = ?", [songId]);
+    await database.query('DELETE FROM songs WHERE id = ?', [songId]);
 
     return songs[0];
 }
 
 async function recordListen(songId, userId = null, ipAddress = null) {
     await database.query(
-        "INSERT INTO song_listens (song_id, user_id, ip_address) VALUES (?, ?, ?)",
+        'INSERT INTO song_listens (song_id, user_id, ip_address) VALUES (?, ?, ?)',
         [songId, userId, ipAddress]
     );
 
     const [result] = await database.query(
-        "SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?",
+        'SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?',
         [songId]
     );
 
@@ -270,7 +270,7 @@ async function recordListen(songId, userId = null, ipAddress = null) {
 
 async function getListenStats(songId) {
     const [total] = await database.query(
-        "SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?",
+        'SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?',
         [songId]
     );
 

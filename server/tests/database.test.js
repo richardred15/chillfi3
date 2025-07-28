@@ -75,7 +75,7 @@ describe('Database', () => {
         });
 
         test('should reject SQL injection attempts', () => {
-            const maliciousParams = ["'; DROP TABLE users; --"];
+            const maliciousParams = ['\'; DROP TABLE users; --'];
             expect(validateQueryParams(maliciousParams)).toBe(false);
         });
 

@@ -22,20 +22,20 @@ const SQL_INJECTION_PATTERNS = [
 
 // Check for SQL injection patterns
 function detectSQLInjection(input) {
-    if (typeof input !== "string") return false;
+    if (typeof input !== 'string') return false;
 
     return SQL_INJECTION_PATTERNS.some((pattern) => pattern.test(input));
 }
 
 // Sanitize database input
 function sanitizeForDB(input) {
-    if (typeof input !== "string") return input;
+    if (typeof input !== 'string') return input;
 
     // Remove dangerous characters
     return input
-        .replace(/['"\\;]/g, "") // Remove quotes and semicolons
-        .replace(/--/g, "") // Remove SQL comments
-        .replace(/\/\*|\*\//g, "") // Remove block comments
+        .replace(/['"\\;]/g, '') // Remove quotes and semicolons
+        .replace(/--/g, '') // Remove SQL comments
+        .replace(/\/\*|\*\//g, '') // Remove block comments
         .trim();
 }
 
@@ -47,12 +47,12 @@ function isValidJWT(token) {
 
     try {
         // Basic JWT structure validation
-        const parts = token.split(".");
+        const parts = token.split('.');
         if (parts.length !== 3) return false;
 
         // Decode header and payload to ensure they're valid JSON
-        JSON.parse(Buffer.from(parts[0], "base64url").toString());
-        JSON.parse(Buffer.from(parts[1], "base64url").toString());
+        JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+        JSON.parse(Buffer.from(parts[1], 'base64url').toString());
 
         return true;
     } catch {
@@ -61,13 +61,13 @@ function isValidJWT(token) {
 }
 
 // Validate database query parameters
-function validateQueryParams(params, context = "") {
+function validateQueryParams(params, context = '') {
     if (!Array.isArray(params)) return false;
 
-    return params.every((param, index) => {
-        if (typeof param === "string") {
+    return params.every((param, _index) => {
+        if (typeof param === 'string') {
             // Skip validation for valid JWT tokens in auth contexts only
-            if (context === "auth" && isValidJWT(param)) {
+            if (context === 'auth' && isValidJWT(param)) {
                 return true;
             }
             // Additional length check
@@ -75,7 +75,7 @@ function validateQueryParams(params, context = "") {
             return !detectSQLInjection(param);
         }
         // Validate numeric parameters
-        if (typeof param === "number") {
+        if (typeof param === 'number') {
             return (
                 Number.isFinite(param) &&
                 param >= -2147483648 &&
@@ -83,7 +83,7 @@ function validateQueryParams(params, context = "") {
             );
         }
         // Allow boolean parameters
-        if (typeof param === "boolean") {
+        if (typeof param === 'boolean') {
             return true;
         }
         return param === null || param === undefined; // Allow null/undefined
@@ -92,7 +92,7 @@ function validateQueryParams(params, context = "") {
 
 // Validate user input for XSS
 function validateUserInput(input) {
-    if (typeof input !== "string") return input;
+    if (typeof input !== 'string') return input;
 
     const xssPatterns = [
         /<script[^>]*>.*?<\/script>/gi,
@@ -102,7 +102,7 @@ function validateUserInput(input) {
         /<\s*\/?\s*(script|iframe|object|embed|form)/gi,
     ];
 
-    return xssPatterns.some((pattern) => pattern.test(input)) ? "" : input;
+    return xssPatterns.some((pattern) => pattern.test(input)) ? '' : input;
 }
 
 module.exports = {

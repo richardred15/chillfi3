@@ -6,7 +6,7 @@
 const userQueues = new Map();
 
 // Handle socket events
-function handleSocket(socket, io) {
+function handleSocket(socket, _io) {
     // Get current queue
     socket.on('player:queue', async () => {
         try {

@@ -5,20 +5,20 @@
  * playing, searching, and tracking listens. Integrates with AWS S3 for file storage and provides real-time
  * socket event handlers for client interactions.
  */
-require("dotenv").config({ path: __dirname + "/.env" });
+require('dotenv').config({ path: __dirname + '/.env' });
 const {
     S3Client,
     DeleteObjectCommand,
     PutObjectCommand,
-} = require("@aws-sdk/client-s3");
-const crypto = require("crypto");
-const config = require("./config");
-const database = require("./database");
-const logger = require("./utils/logger");
-const { success, error, paginated } = require("./utils/response");
-const rateLimiter = require("./middleware/rateLimiter");
-const uploadService = require("./services/uploadService");
-const songService = require("./services/songService");
+} = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
+const config = require('./config');
+const database = require('./database');
+const logger = require('./utils/logger');
+const { success, error, paginated } = require('./utils/response');
+const rateLimiter = require('./middleware/rateLimiter');
+const uploadService = require('./services/uploadService');
+const songService = require('./services/songService');
 
 const s3Client = new S3Client({
     region: config.aws.region,
@@ -35,76 +35,76 @@ const { uploadSessions, imageUploadSessions } = uploadService;
 // Handle socket events
 function handleSocket(socket, io) {
     // List songs
-    socket.on("song:list", async (data) => {
+    socket.on('song:list', async (data) => {
         try {
-            if (!rateLimiter(socket, "song:list")) {
-                return error(socket, "song:list", "Rate limit exceeded");
+            if (!rateLimiter(socket, 'song:list')) {
+                return error(socket, 'song:list', 'Rate limit exceeded');
             }
 
             if (!socket.authenticated) {
-                return error(socket, "song:list", "Authentication required");
+                return error(socket, 'song:list', 'Authentication required');
             }
 
             const { filters = {}, page = 1, limit = 20 } = data;
 
             // Handle current_user filter
-            if (filters.uploadedBy === "current_user") {
+            if (filters.uploadedBy === 'current_user') {
                 filters.uploadedBy = socket.user.id;
             }
 
             const result = await songService.getSongs(filters, page, limit);
             paginated(
                 socket,
-                "song:list",
+                'song:list',
                 result.songs,
                 result.total,
                 result.page,
                 limit
             );
         } catch (err) {
-            logger.error("List songs error:", err);
-            error(socket, "song:list", "Failed to get songs");
+            logger.error('List songs error:', err);
+            error(socket, 'song:list', 'Failed to get songs');
         }
     });
 
     // Get song details
-    socket.on("song:get", async (data) => {
+    socket.on('song:get', async (data) => {
         try {
             if (!socket.authenticated) {
-                return error(socket, "song:get", "Authentication required");
+                return error(socket, 'song:get', 'Authentication required');
             }
 
             const { songId } = data;
 
             if (!songId) {
-                return error(socket, "song:get", "Song ID required");
+                return error(socket, 'song:get', 'Song ID required');
             }
 
             const song = await songService.getSongById(songId);
 
             if (!song) {
-                return error(socket, "song:get", "Song not found");
+                return error(socket, 'song:get', 'Song not found');
             }
 
-            success(socket, "song:get", { song });
+            success(socket, 'song:get', { song });
         } catch (err) {
-            logger.error("Get song error:", err);
-            error(socket, "song:get", "Failed to get song");
+            logger.error('Get song error:', err);
+            error(socket, 'song:get', 'Failed to get song');
         }
     });
 
     // Initialize upload session
-    socket.on("song:uploadInit", async (data) => {
+    socket.on('song:uploadInit', async (data) => {
         try {
-            if (!rateLimiter(socket, "song:upload")) {
-                return error(socket, "song:uploadInit", "Rate limit exceeded");
+            if (!rateLimiter(socket, 'song:upload')) {
+                return error(socket, 'song:uploadInit', 'Rate limit exceeded');
             }
 
             if (!socket.authenticated) {
                 return error(
                     socket,
-                    "song:uploadInit",
-                    "Authentication required"
+                    'song:uploadInit',
+                    'Authentication required'
                 );
             }
 
@@ -115,28 +115,28 @@ function handleSocket(socket, io) {
                 totalSize
             );
 
-            success(socket, "song:uploadInit", { uploadId });
+            success(socket, 'song:uploadInit', { uploadId });
         } catch (err) {
-            logger.error("Upload init error:", err);
-            error(socket, "song:uploadInit", "Failed to initialize upload");
+            logger.error('Upload init error:', err);
+            error(socket, 'song:uploadInit', 'Failed to initialize upload');
         }
     });
 
     // Upload song chunk
-    socket.on("song:uploadChunk", async (data) => {
+    socket.on('song:uploadChunk', async (data) => {
         try {
             if (!socket.authenticated) {
                 return error(
                     socket,
-                    "song:uploadChunk",
-                    "Authentication required"
+                    'song:uploadChunk',
+                    'Authentication required'
                 );
             }
 
             const { uploadId, fileIndex, chunk, metadata } = data;
 
             if (!uploadId) {
-                return error(socket, "song:uploadChunk", "Upload ID required");
+                return error(socket, 'song:uploadChunk', 'Upload ID required');
             }
 
             const songId = await uploadService.processChunk(
@@ -147,13 +147,13 @@ function handleSocket(socket, io) {
                 socket.user.id
             );
 
-            success(socket, "song:uploadChunk", songId ? { songId } : null);
+            success(socket, 'song:uploadChunk', songId ? { songId } : null);
         } catch (err) {
-            logger.error("Chunk upload error:", err);
+            logger.error('Chunk upload error:', err);
             error(
                 socket,
-                "song:uploadChunk",
-                err.message || "Chunk upload failed"
+                'song:uploadChunk',
+                err.message || 'Chunk upload failed'
             );
         }
     });
@@ -161,53 +161,53 @@ function handleSocket(socket, io) {
     // Legacy upload handler removed - using chunked upload only
 
     // Upload control
-    socket.on("song:uploadControl", async (data) => {
+    socket.on('song:uploadControl', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit("song:uploadControl", {
+                return socket.emit('song:uploadControl', {
                     success: false,
-                    message: "Authentication required",
+                    message: 'Authentication required',
                 });
             }
 
             const { uploadId, action } = data;
 
-            if (action === "cancel") {
+            if (action === 'cancel') {
                 uploadService.cancelUpload(uploadId, socket.user.id);
             }
 
-            socket.emit("song:uploadControl", { success: true });
+            socket.emit('song:uploadControl', { success: true });
         } catch (error) {
-            console.error("Upload control error:", error);
-            socket.emit("song:uploadControl", {
+            console.error('Upload control error:', error);
+            socket.emit('song:uploadControl', {
                 success: false,
-                message: "Upload control failed",
+                message: 'Upload control failed',
             });
         }
     });
 
     // Update album
-    socket.on("album:update", async (data) => {
+    socket.on('album:update', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit("album:update", {
+                return socket.emit('album:update', {
                     success: false,
-                    message: "Authentication required",
+                    message: 'Authentication required',
                 });
             }
 
             const { albumId, updates } = data;
 
             if (!albumId) {
-                return socket.emit("album:update", {
+                return socket.emit('album:update', {
                     success: false,
-                    message: "Album ID required",
+                    message: 'Album ID required',
                 });
             }
 
             // Check if user has permission (album owner or admin)
             const albumSongs = await database.query(
-                "SELECT DISTINCT s.uploaded_by FROM songs s WHERE s.album_id = ?",
+                'SELECT DISTINCT s.uploaded_by FROM songs s WHERE s.album_id = ?',
                 [albumId]
             );
             const hasPermission =
@@ -215,13 +215,13 @@ function handleSocket(socket, io) {
                 albumSongs.some((song) => song.uploaded_by === socket.user.id);
 
             if (!hasPermission) {
-                return socket.emit("album:update", {
+                return socket.emit('album:update', {
                     success: false,
-                    message: "Unauthorized",
+                    message: 'Unauthorized',
                 });
             }
 
-            const allowedFields = ["title", "release_year"];
+            const allowedFields = ['title', 'release_year'];
             const updateFields = [];
             const updateValues = [];
 
@@ -235,35 +235,35 @@ function handleSocket(socket, io) {
             if (updateFields.length > 0) {
                 updateValues.push(albumId);
                 const updateQuery = `UPDATE albums SET ${updateFields.join(
-                    ", "
+                    ', '
                 )} WHERE id = ?`;
                 await database.query(updateQuery, updateValues);
             }
 
             // Get updated album
             const albums = await database.query(
-                "SELECT * FROM albums WHERE id = ?",
+                'SELECT * FROM albums WHERE id = ?',
                 [albumId]
             );
 
-            socket.emit("album:update", {
+            socket.emit('album:update', {
                 success: true,
                 album: albums[0],
             });
         } catch (error) {
-            console.error("Update album error:", error);
-            socket.emit("album:update", {
+            console.error('Update album error:', error);
+            socket.emit('album:update', {
                 success: false,
-                message: "Failed to update album",
+                message: 'Failed to update album',
             });
         }
     });
 
     // Update song
-    socket.on("song:update", async (data) => {
+    socket.on('song:update', async (data) => {
         try {
             if (!socket.authenticated) {
-                return error(socket, "song:update", "Authentication required");
+                return error(socket, 'song:update', 'Authentication required');
             }
 
             const { songId, metadata } = data;
@@ -275,24 +275,24 @@ function handleSocket(socket, io) {
                 socket.user.is_admin
             );
 
-            success(socket, "song:update", { song: updatedSong });
+            success(socket, 'song:update', { song: updatedSong });
         } catch (err) {
-            logger.error("Update song error:", err);
+            logger.error('Update song error:', err);
             error(
                 socket,
-                "song:update",
-                err.message || "Failed to update song"
+                'song:update',
+                err.message || 'Failed to update song'
             );
         }
     });
 
     // Delete song
-    socket.on("song:delete", async (data) => {
+    socket.on('song:delete', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit("song:delete", {
+                return socket.emit('song:delete', {
                     success: false,
-                    message: "Authentication required",
+                    message: 'Authentication required',
                 });
             }
 
@@ -300,14 +300,14 @@ function handleSocket(socket, io) {
 
             // Check ownership
             const songs = await database.query(
-                "SELECT uploaded_by, file_path FROM songs WHERE id = ?",
+                'SELECT uploaded_by, file_path FROM songs WHERE id = ?',
                 [songId]
             );
 
             if (songs.length === 0) {
-                return socket.emit("song:delete", {
+                return socket.emit('song:delete', {
                     success: false,
-                    message: "Song not found",
+                    message: 'Song not found',
                 });
             }
 
@@ -315,9 +315,9 @@ function handleSocket(socket, io) {
                 songs[0].uploaded_by !== socket.user.id &&
                 !socket.user.is_admin
             ) {
-                return socket.emit("song:delete", {
+                return socket.emit('song:delete', {
                     success: false,
-                    message: "Unauthorized",
+                    message: 'Unauthorized',
                 });
             }
 
@@ -325,7 +325,7 @@ function handleSocket(socket, io) {
 
             // Delete from S3
             if (song.file_path) {
-                const fileKey = song.file_path.split("/").pop();
+                const fileKey = song.file_path.split('/').pop();
                 const deleteCommand = new DeleteObjectCommand({
                     Bucket: BUCKET_NAME,
                     Key: `songs/${fileKey}`,
@@ -334,34 +334,34 @@ function handleSocket(socket, io) {
             }
 
             // Delete from database
-            await database.query("DELETE FROM songs WHERE id = ?", [songId]);
+            await database.query('DELETE FROM songs WHERE id = ?', [songId]);
 
-            socket.emit("song:delete", { success: true });
+            socket.emit('song:delete', { success: true });
         } catch (error) {
-            console.error("Delete song error:", error);
-            socket.emit("song:delete", {
+            console.error('Delete song error:', error);
+            socket.emit('song:delete', {
                 success: false,
-                message: "Failed to delete song",
+                message: 'Failed to delete song',
             });
         }
     });
 
     // Play song
-    socket.on("song:play", async (data) => {
+    socket.on('song:play', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit("song:play", {
+                return socket.emit('song:play', {
                     error: true,
-                    message: "Authentication required",
+                    message: 'Authentication required',
                 });
             }
 
             const { songId } = data;
 
             if (!songId) {
-                return socket.emit("song:play", {
+                return socket.emit('song:play', {
                     error: true,
-                    message: "Song ID required",
+                    message: 'Song ID required',
                 });
             }
 
@@ -377,15 +377,15 @@ function handleSocket(socket, io) {
             );
 
             if (songs.length === 0) {
-                return socket.emit("song:play", {
+                return socket.emit('song:play', {
                     error: true,
-                    message: "Song not found",
+                    message: 'Song not found',
                 });
             }
 
             const song = songs[0];
 
-            socket.emit("song:play", {
+            socket.emit('song:play', {
                 url: song.file_path,
                 metadata: {
                     id: song.id,
@@ -396,21 +396,21 @@ function handleSocket(socket, io) {
                 },
             });
         } catch (error) {
-            console.error("Play song error:", error);
-            socket.emit("song:play", {
+            console.error('Play song error:', error);
+            socket.emit('song:play', {
                 error: true,
-                message: "Failed to get song URL",
+                message: 'Failed to get song URL',
             });
         }
     });
 
     // Record listen
-    socket.on("song:recordListen", async (data) => {
+    socket.on('song:recordListen', async (data) => {
         try {
             const { songId } = data;
 
             if (!songId) {
-                return error(socket, "song:recordListen", "Song ID required");
+                return error(socket, 'song:recordListen', 'Song ID required');
             }
 
             const listenCount = await songService.recordListen(
@@ -419,27 +419,27 @@ function handleSocket(socket, io) {
                 socket.handshake.address
             );
 
-            success(socket, "song:recordListen", { listenCount });
+            success(socket, 'song:recordListen', { listenCount });
         } catch (err) {
-            logger.error("Record listen error:", err);
-            error(socket, "song:recordListen", "Failed to record listen");
+            logger.error('Record listen error:', err);
+            error(socket, 'song:recordListen', 'Failed to record listen');
         }
     });
 
     // Get listen stats
-    socket.on("song:getListens", async (data) => {
+    socket.on('song:getListens', async (data) => {
         try {
             const { songId } = data;
 
             if (!songId) {
-                return socket.emit("song:getListens", {
+                return socket.emit('song:getListens', {
                     error: true,
-                    message: "Song ID required",
+                    message: 'Song ID required',
                 });
             }
 
             const [total] = await database.query(
-                "SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?",
+                'SELECT COUNT(*) as count FROM song_listens WHERE song_id = ?',
                 [songId]
             );
 
@@ -455,26 +455,26 @@ function handleSocket(socket, io) {
                 [songId]
             );
 
-            socket.emit("song:getListens", {
+            socket.emit('song:getListens', {
                 total: total.count,
                 recentListens,
             });
         } catch (error) {
-            console.error("Get listens error:", error);
-            socket.emit("song:getListens", {
+            console.error('Get listens error:', error);
+            socket.emit('song:getListens', {
                 error: true,
-                message: "Failed to get listen stats",
+                message: 'Failed to get listen stats',
             });
         }
     });
 
     // Upload image chunk
-    socket.on("song:uploadImageChunk", async (data) => {
+    socket.on('song:uploadImageChunk', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit("song:uploadImageChunk", {
+                return socket.emit('song:uploadImageChunk', {
                     success: false,
-                    message: "Authentication required",
+                    message: 'Authentication required',
                 });
             }
 
@@ -499,7 +499,7 @@ function handleSocket(socket, io) {
             );
 
             if (imageUrl) {
-                socket.emit("song:uploadImageChunk", {
+                socket.emit('song:uploadImageChunk', {
                     success: true,
                     uploadId,
                     imageUrl,
@@ -509,26 +509,26 @@ function handleSocket(socket, io) {
                 const progress = session
                     ? Math.round((session.receivedCount / totalChunks) * 100)
                     : 0;
-                socket.emit("song:uploadImageChunk", {
+                socket.emit('song:uploadImageChunk', {
                     success: true,
                     uploadId,
                     progress,
                 });
             }
         } catch (error) {
-            console.error("Image chunk upload error:", error);
-            socket.emit("song:uploadImageChunk", {
+            console.error('Image chunk upload error:', error);
+            socket.emit('song:uploadImageChunk', {
                 success: false,
-                message: "Failed to upload image chunk",
+                message: 'Failed to upload image chunk',
             });
         }
     });
 
     // Get albums
-    socket.on("albums:list", async (data) => {
+    socket.on('albums:list', async (data) => {
         try {
             if (!socket.authenticated) {
-                return error(socket, "albums:list", "Authentication required");
+                return error(socket, 'albums:list', 'Authentication required');
             }
 
             const { page = 1, limit = 20 } = data;
@@ -556,29 +556,29 @@ function handleSocket(socket, io) {
 
             paginated(
                 socket,
-                "albums:list",
+                'albums:list',
                 albums,
                 totalCount.count,
                 page,
                 limit
             );
         } catch (err) {
-            logger.error("List albums error:", err);
-            error(socket, "albums:list", "Failed to get albums");
+            logger.error('List albums error:', err);
+            error(socket, 'albums:list', 'Failed to get albums');
         }
     });
 
     // Search songs
-    socket.on("song:search", async (data) => {
+    socket.on('song:search', async (data) => {
         try {
-            if (!rateLimiter(socket, "song:search")) {
-                return error(socket, "song:search", "Rate limit exceeded");
+            if (!rateLimiter(socket, 'song:search')) {
+                return error(socket, 'song:search', 'Rate limit exceeded');
             }
 
             const { query, page = 1, limit = 20 } = data;
 
             if (!query || query.trim().length < 2) {
-                return success(socket, "song:search", {
+                return success(socket, 'song:search', {
                     songs: [],
                     total: 0,
                     page,
@@ -614,25 +614,25 @@ function handleSocket(socket, io) {
                 [searchTerm, searchTerm, searchTerm, searchTerm]
             );
 
-            success(socket, "song:search", {
+            success(socket, 'song:search', {
                 songs,
                 total: totalResult.count,
                 page,
                 query,
             });
         } catch (error) {
-            console.error("Search songs error:", error);
-            error(socket, "song:search", "Failed to search songs");
+            console.error('Search songs error:', error);
+            error(socket, 'song:search', 'Failed to search songs');
         }
     });
 
     // Get recently played songs
-    socket.on("song:recentlyPlayed", async (data) => {
+    socket.on('song:recentlyPlayed', async (data) => {
         try {
             const { limit = 10, offset = 0 } = data;
 
             if (!socket.authenticated) {
-                return socket.emit("song:recentlyPlayed", {
+                return socket.emit('song:recentlyPlayed', {
                     success: true,
                     songs: [],
                     total: 0,
@@ -665,16 +665,16 @@ function handleSocket(socket, io) {
                 [socket.user.id]
             );
 
-            socket.emit("song:recentlyPlayed", {
+            socket.emit('song:recentlyPlayed', {
                 success: true,
                 songs,
                 total: totalResult.count,
             });
         } catch (error) {
-            console.error("Failed to get recently played:", error);
-            socket.emit("song:recentlyPlayed", {
+            console.error('Failed to get recently played:', error);
+            socket.emit('song:recentlyPlayed', {
                 success: false,
-                message: "Failed to get recently played songs",
+                message: 'Failed to get recently played songs',
             });
         }
     });

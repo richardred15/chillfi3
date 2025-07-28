@@ -1,34 +1,34 @@
 /**
  * ChillFi3 Server - Main Entry Point
  */
-require("dotenv").config();
-const express = require("express");
-const https = require("https");
-const fs = require("fs");
-const path = require("path");
-const { Server } = require("socket.io");
-const cors = require("cors");
-const helmet = require("helmet");
+require('dotenv').config();
+const express = require('express');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const helmet = require('helmet');
 
 // Import modules
-const config = require("./config");
-const database = require("./database");
-const songService = require("./services/songService");
-const auth = require("./auth");
-const songs = require("./songs");
-const users = require("./users");
-const playlists = require("./playlists");
-const player = require("./player");
-const versionManager = require("./version");
+const config = require('./config');
+const database = require('./database');
+const songService = require('./services/songService');
+const auth = require('./auth');
+const songs = require('./songs');
+const users = require('./users');
+const playlists = require('./playlists');
+const player = require('./player');
+const versionManager = require('./version');
 
 const app = express();
 const PORT = config.server.port;
 
 // HTTPS enforcement in production
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === 'production') {
     app.use((req, res, next) => {
-        if (req.header("x-forwarded-proto") !== "https") {
-            res.redirect(`https://${req.header("host")}${req.url}`);
+        if (req.header('x-forwarded-proto') !== 'https') {
+            res.redirect(`https://${req.header('host')}${req.url}`);
         } else {
             next();
         }
@@ -40,15 +40,15 @@ app.use(
     helmet({
         contentSecurityPolicy: {
             directives: {
-                defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "cdn.socket.io"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", "data:", "https:"],
-                connectSrc: ["'self'", "wss:", "https:"],
-                fontSrc: ["'self'"],
-                objectSrc: ["'none'"],
-                mediaSrc: ["'self'", "https:"],
-                frameSrc: ["'none'"],
+                defaultSrc: ['\'self\''],
+                scriptSrc: ['\'self\'', '\'unsafe-inline\'', 'cdn.socket.io'],
+                styleSrc: ['\'self\'', '\'unsafe-inline\''],
+                imgSrc: ['\'self\'', 'data:', 'https:'],
+                connectSrc: ['\'self\'', 'wss:', 'https:'],
+                fontSrc: ['\'self\''],
+                objectSrc: ['\'none\''],
+                mediaSrc: ['\'self\'', 'https:'],
+                frameSrc: ['\'none\''],
             },
         },
         crossOriginEmbedderPolicy: false,
@@ -67,16 +67,16 @@ app.use(
             if (!origin) return callback(null, true);
 
             const allowedOrigins = [config.client.url];
-            if (process.env.NODE_ENV === "development") {
+            if (process.env.NODE_ENV === 'development') {
                 allowedOrigins.push(
-                    process.env.DEV_CLIENT_URL || "http://localhost:3000"
+                    process.env.DEV_CLIENT_URL || 'http://localhost:3000'
                 );
             }
             if (allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.warn("CORS blocked origin:", origin);
-                callback(new Error("Not allowed by CORS"));
+                console.warn('CORS blocked origin:', origin);
+                callback(new Error('Not allowed by CORS'));
             }
         },
         credentials: true,
@@ -92,12 +92,12 @@ app.use((req, res, next) => {
 });
 
 // Reduce payload limits for security
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true, limit: "5mb" }));
-app.use(express.raw({ limit: "100mb", type: "application/octet-stream" }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(express.raw({ limit: '100mb', type: 'application/octet-stream' }));
 
 // Serve static files from client directory
-app.use(express.static(path.join(__dirname, "../")));
+app.use(express.static(path.join(__dirname, '../')));
 
 // Simple HTTP rate limiter for OG endpoints
 const ogRateLimit = new Map();
@@ -107,8 +107,8 @@ function ogRateLimiter(req, res, next) {
     const clientIp =
         req.ip ||
         req.connection.remoteAddress ||
-        req.headers["x-forwarded-for"]?.split(",")[0] ||
-        "unknown";
+        req.headers['x-forwarded-for']?.split(',')[0] ||
+        'unknown';
     const now = Date.now();
     const windowStart = now - OG_RATE_LIMIT.window;
 
@@ -122,7 +122,7 @@ function ogRateLimiter(req, res, next) {
     );
 
     if (validRequests.length >= OG_RATE_LIMIT.requests) {
-        return res.status(429).json({ error: "Rate limit exceeded" });
+        return res.status(429).json({ error: 'Rate limit exceeded' });
     }
 
     validRequests.push(now);
@@ -130,8 +130,8 @@ function ogRateLimiter(req, res, next) {
     next();
 }
 
-app.get("/api/og/song/:id", ogRateLimiter, async (req, res) => {
-    console.log("OG song request:", req.params.id);
+app.get('/api/og/song/:id', ogRateLimiter, async (req, res) => {
+    console.log('OG song request:', req.params.id);
     try {
         const songId = req.params.id;
         const songs = await database.query(
@@ -146,7 +146,7 @@ app.get("/api/og/song/:id", ogRateLimiter, async (req, res) => {
         );
 
         if (songs.length === 0) {
-            return res.status(404).json({ error: "Song not found" });
+            return res.status(404).json({ error: 'Song not found' });
         }
 
         const song = songs[0];
@@ -157,13 +157,13 @@ app.get("/api/og/song/:id", ogRateLimiter, async (req, res) => {
             image: song.cover_art_url,
         });
     } catch (error) {
-        console.error("Get song OG error:", error);
-        res.status(500).json({ error: "Failed to get song" });
+        console.error('Get song OG error:', error);
+        res.status(500).json({ error: 'Failed to get song' });
     }
 });
 
-app.get("/api/og/album", ogRateLimiter, async (req, res) => {
-    console.log("OG album request:", req.query);
+app.get('/api/og/album', ogRateLimiter, async (req, res) => {
+    console.log('OG album request:', req.query);
     try {
         const { name, artist, id } = req.query;
         let query, params;
@@ -184,7 +184,7 @@ app.get("/api/og/album", ogRateLimiter, async (req, res) => {
                 FROM albums al
                 LEFT JOIN artists a ON al.artist_id = a.id
                 LEFT JOIN songs s ON al.id = s.album_id
-                WHERE al.title = ? ${artist ? "AND a.name = ?" : ""}
+                WHERE al.title = ? ${artist ? 'AND a.name = ?' : ''}
                 GROUP BY al.id
                 LIMIT 1
             `;
@@ -194,7 +194,7 @@ app.get("/api/og/album", ogRateLimiter, async (req, res) => {
         const albums = await database.query(query, params);
 
         if (albums.length === 0) {
-            return res.status(404).json({ error: "Album not found" });
+            return res.status(404).json({ error: 'Album not found' });
         }
 
         const album = albums[0];
@@ -205,13 +205,13 @@ app.get("/api/og/album", ogRateLimiter, async (req, res) => {
             songCount: album.song_count,
         });
     } catch (error) {
-        console.error("Get album OG error:", error);
-        res.status(500).json({ error: "Failed to get album" });
+        console.error('Get album OG error:', error);
+        res.status(500).json({ error: 'Failed to get album' });
     }
 });
 
-app.get("/api/og/library/:username", ogRateLimiter, async (req, res) => {
-    console.log("OG library request:", req.params.username);
+app.get('/api/og/library/:username', ogRateLimiter, async (req, res) => {
+    console.log('OG library request:', req.params.username);
     try {
         const username = req.params.username;
         const songs = await database.query(
@@ -230,7 +230,7 @@ app.get("/api/og/library/:username", ogRateLimiter, async (req, res) => {
         );
 
         if (songs.length === 0) {
-            return res.status(404).json({ error: "Library not found" });
+            return res.status(404).json({ error: 'Library not found' });
         }
 
         const library = songs[0];
@@ -241,13 +241,13 @@ app.get("/api/og/library/:username", ogRateLimiter, async (req, res) => {
             image: library.cover_art_url,
         });
     } catch (error) {
-        console.error("Get library OG error:", error);
-        res.status(500).json({ error: "Failed to get library" });
+        console.error('Get library OG error:', error);
+        res.status(500).json({ error: 'Failed to get library' });
     }
 });
 
-app.get("/api/og/artist/:name", ogRateLimiter, async (req, res) => {
-    console.log("OG artist request:", req.params.name);
+app.get('/api/og/artist/:name', ogRateLimiter, async (req, res) => {
+    console.log('OG artist request:', req.params.name);
     try {
         const artistName = req.params.name;
         const songs = await database.query(
@@ -266,7 +266,7 @@ app.get("/api/og/artist/:name", ogRateLimiter, async (req, res) => {
         );
 
         if (songs.length === 0) {
-            return res.status(404).json({ error: "Artist not found" });
+            return res.status(404).json({ error: 'Artist not found' });
         }
 
         const artist = songs[0];
@@ -277,36 +277,36 @@ app.get("/api/og/artist/:name", ogRateLimiter, async (req, res) => {
             image: artist.cover_art_url,
         });
     } catch (error) {
-        console.error("Get artist OG error:", error);
-        res.status(500).json({ error: "Failed to get artist" });
+        console.error('Get artist OG error:', error);
+        res.status(500).json({ error: 'Failed to get artist' });
     }
 });
 
 // API routes
-app.use("/api/upload", require("./routes/upload"));
+app.use('/api/upload', require('./routes/upload'));
 
-app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // HTTPS server setup
 const httpsOptions = config.server.httpsKey
     ? {
-          key: fs.readFileSync(config.server.httpsKey),
-          cert: fs.readFileSync(config.server.httpsCert),
-          ca: fs.readFileSync(config.server.httpsCa),
-      }
+        key: fs.readFileSync(config.server.httpsKey),
+        cert: fs.readFileSync(config.server.httpsCert),
+        ca: fs.readFileSync(config.server.httpsCa),
+    }
     : null;
 
 const server = httpsOptions
     ? https.createServer(httpsOptions, app)
-    : require("http").createServer(app);
+    : require('http').createServer(app);
 
 // Socket.IO setup
 const io = new Server(server, {
     cors: {
         origin: config.client.url,
-        methods: ["GET", "POST"],
+        methods: ['GET', 'POST'],
     },
 });
 
@@ -314,10 +314,10 @@ const io = new Server(server, {
 database
     .init()
     .then(() => {
-        console.log("Database initialized successfully");
+        console.log('Database initialized successfully');
     })
     .catch((err) => {
-        console.error("Database initialization failed:", err);
+        console.error('Database initialization failed:', err);
         process.exit(1);
     });
 
@@ -325,13 +325,13 @@ database
 io.use(auth.authenticateSocket);
 
 // Socket.IO connection handling with lazy-loading handler registry
-io.on("connection", (socket) => {
+io.on('connection', (socket) => {
     console.log(
-        "Client connected:",
+        'Client connected:',
         socket.id,
         socket.authenticated
             ? `(User: ${socket.user?.username})`
-            : "(Anonymous)"
+            : '(Anonymous)'
     );
 
     // Handler registry for lazy loading
@@ -349,7 +349,7 @@ io.on("connection", (socket) => {
 
     // Lazy load handlers on first event of each namespace
     socket.onAny((eventName, ...args) => {
-        const namespace = eventName.split(":")[0];
+        const namespace = eventName.split(':')[0];
 
         if (
             handlerRegistry[namespace] &&
@@ -361,8 +361,8 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("disconnect", () => {
-        console.log("Client disconnected:", socket.id);
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
         // Clean up socket resources
         if (socket.loadedHandlers) {
             socket.loadedHandlers.clear();
@@ -377,49 +377,49 @@ io.on("connection", (socket) => {
 });
 
 // Error handling and graceful shutdown
-process.on("uncaughtException", (err) => {
-    console.error("Uncaught Exception:", err);
-    gracefulShutdown("uncaughtException");
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    gracefulShutdown('uncaughtException');
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 async function gracefulShutdown(signal) {
     console.log(`Received ${signal}, starting graceful shutdown...`);
 
     // Close server
     server.close(() => {
-        console.log("HTTP server closed");
+        console.log('HTTP server closed');
     });
 
     // Close Socket.IO
     io.close(() => {
-        console.log("Socket.IO server closed");
+        console.log('Socket.IO server closed');
     });
 
     // Close database connections
     try {
         await database.cleanup();
     } catch (error) {
-        console.error("Error during database cleanup:", error);
+        console.error('Error during database cleanup:', error);
     }
 
     // Cleanup upload service
     try {
-        const uploadService = require("./services/uploadService");
+        const uploadService = require('./services/uploadService');
         uploadService.cleanup();
     } catch (error) {
-        console.error("Error during upload service cleanup:", error);
+        console.error('Error during upload service cleanup:', error);
     }
 
     // Force exit after timeout
     setTimeout(() => {
-        console.log("Force exit");
+        console.log('Force exit');
         process.exit(1);
     }, 10000);
 
@@ -429,7 +429,7 @@ async function gracefulShutdown(signal) {
 // Start server
 server.listen(PORT, () => {
     console.log(`ChillFi3 server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log('Type "help" for available commands\n');
 
     // Start interactive CLI
@@ -438,16 +438,16 @@ server.listen(PORT, () => {
 
 // Interactive CLI
 function startCLI() {
-    const readline = require("readline");
-    const bcrypt = require("bcrypt");
+    const readline = require('readline');
+    const bcrypt = require('bcrypt');
 
     let uploadSessions, imageUploadSessions;
     try {
-        const uploadService = require("./services/uploadService");
+        const uploadService = require('./services/uploadService');
         uploadSessions = uploadService.uploadSessions;
         imageUploadSessions = uploadService.imageUploadSessions;
     } catch (error) {
-        console.log("Upload service not available");
+        console.log('Upload service not available');
         uploadSessions = new Map();
         imageUploadSessions = new Map();
     }
@@ -455,23 +455,23 @@ function startCLI() {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
-        prompt: `${process.env.APP_NAME || "musiclib"}> `,
+        prompt: `${process.env.APP_NAME || 'musiclib'}> `,
         completer: (line) => {
             const commands = [
-                "help",
-                "setup-database",
-                "migrate",
-                "backup",
-                "restore",
-                "create-admin",
-                "add-user",
-                "list-users",
-                "reset-password",
-                "make-admin",
-                "status",
-                "uploads",
-                "clear",
-                "debug-users",
+                'help',
+                'setup-database',
+                'migrate',
+                'backup',
+                'restore',
+                'create-admin',
+                'add-user',
+                'list-users',
+                'reset-password',
+                'make-admin',
+                'status',
+                'uploads',
+                'clear',
+                'debug-users',
             ];
             const hits = commands.filter((cmd) => cmd.startsWith(line));
             return [hits.length ? hits : commands, line];
@@ -489,135 +489,135 @@ function startCLI() {
 
         const formatted = args
             .map((arg) => {
-                if (typeof arg === "object" && arg !== null) {
+                if (typeof arg === 'object' && arg !== null) {
                     return JSON.stringify(arg, null, 2);
                 }
                 return String(arg);
             })
-            .join(" ");
+            .join(' ');
 
-        process.stdout.write(formatted + "\n");
+        process.stdout.write(formatted + '\n');
         rl.prompt(true);
     }
 
     console.log = (...args) => writeWithPrompt(...args);
-    console.error = (...args) => writeWithPrompt("ERROR:", ...args);
-    console.warn = (...args) => writeWithPrompt("WARN:", ...args);
+    console.error = (...args) => writeWithPrompt('ERROR:', ...args);
+    console.warn = (...args) => writeWithPrompt('WARN:', ...args);
 
     rl.prompt();
 
-    rl.on("line", async (line) => {
-        const [command, ...args] = line.trim().split(" ");
+    rl.on('line', async (line) => {
+        const [command, ...args] = line.trim().split(' ');
 
         try {
             switch (command) {
-                case "help":
-                    console.log("\nDatabase Commands:");
-                    console.log(
-                        "  setup-database                          - Initialize database with schema"
-                    );
-                    console.log(
-                        "  migrate                                  - Migrate database to latest schema"
-                    );
-                    console.log(
-                        "  backup [filename]                       - Create database backup"
-                    );
-                    console.log(
-                        "  restore <filename>                      - Restore database from backup"
-                    );
-                    console.log("\nUser Management:");
-                    console.log(
-                        "  create-admin <username> <password>      - Create admin user"
-                    );
-                    console.log(
-                        "  add-user <username> [password] [admin]  - Add user"
-                    );
-                    console.log(
-                        "  list-users                              - List users"
-                    );
-                    console.log(
-                        "  reset-password <username> <password>    - Reset password"
-                    );
-                    console.log(
-                        "  make-admin <username> [true|false]      - Toggle admin"
-                    );
-                    console.log("\nSystem Information:");
-                    console.log(
-                        "  status                                   - Server status"
-                    );
-                    console.log(
-                        "  uploads                                  - Active uploads"
-                    );
-                    console.log(
-                        "  clear                                    - Clear screen"
-                    );
-                    console.log(
-                        "  debug-users                              - Debug user table"
-                    );
-                    console.log(
-                        "  help                                     - Show this help"
-                    );
-                    break;
+            case 'help':
+                console.log('\nDatabase Commands:');
+                console.log(
+                    '  setup-database                          - Initialize database with schema'
+                );
+                console.log(
+                    '  migrate                                  - Migrate database to latest schema'
+                );
+                console.log(
+                    '  backup [filename]                       - Create database backup'
+                );
+                console.log(
+                    '  restore <filename>                      - Restore database from backup'
+                );
+                console.log('\nUser Management:');
+                console.log(
+                    '  create-admin <username> <password>      - Create admin user'
+                );
+                console.log(
+                    '  add-user <username> [password] [admin]  - Add user'
+                );
+                console.log(
+                    '  list-users                              - List users'
+                );
+                console.log(
+                    '  reset-password <username> <password>    - Reset password'
+                );
+                console.log(
+                    '  make-admin <username> [true|false]      - Toggle admin'
+                );
+                console.log('\nSystem Information:');
+                console.log(
+                    '  status                                   - Server status'
+                );
+                console.log(
+                    '  uploads                                  - Active uploads'
+                );
+                console.log(
+                    '  clear                                    - Clear screen'
+                );
+                console.log(
+                    '  debug-users                              - Debug user table'
+                );
+                console.log(
+                    '  help                                     - Show this help'
+                );
+                break;
 
-                case "add-user":
-                    await addUser(args[0], args[1], args[2]);
-                    break;
+            case 'add-user':
+                await addUser(args[0], args[1], args[2]);
+                break;
 
-                case "list-users":
-                    await listUsers();
-                    break;
+            case 'list-users':
+                await listUsers();
+                break;
 
-                case "reset-password":
-                    await resetPassword(args[0], args[1]);
-                    break;
+            case 'reset-password':
+                await resetPassword(args[0], args[1]);
+                break;
 
-                case "make-admin":
-                    await makeAdmin(args[0], args[1]);
-                    break;
+            case 'make-admin':
+                await makeAdmin(args[0], args[1]);
+                break;
 
-                case "status":
-                    await showStatus();
-                    break;
+            case 'status':
+                await showStatus();
+                break;
 
-                case "uploads":
-                    showUploads();
-                    break;
+            case 'uploads':
+                showUploads();
+                break;
 
-                case "clear":
-                    console.clear();
-                    break;
+            case 'clear':
+                console.clear();
+                break;
 
-                case "setup-database":
-                    await setupDatabase();
-                    break;
+            case 'setup-database':
+                await setupDatabase();
+                break;
 
-                case "migrate":
-                    await migrateDatabase();
-                    break;
+            case 'migrate':
+                await migrateDatabase();
+                break;
 
-                case "backup":
-                    await backupDatabase(args[0]);
-                    break;
+            case 'backup':
+                await backupDatabase(args[0]);
+                break;
 
-                case "restore":
-                    await restoreDatabase(args[0]);
-                    break;
+            case 'restore':
+                await restoreDatabase(args[0]);
+                break;
 
-                case "create-admin":
-                    await createAdmin(args[0], args[1]);
-                    break;
+            case 'create-admin':
+                await createAdmin(args[0], args[1]);
+                break;
 
-                case "debug-users":
-                    await debugUsers();
-                    break;
+            case 'debug-users':
+                await debugUsers();
+                break;
 
-                case "":
-                    break;
+            case '':
+                break;
 
-                default:
-                    console.log(
-                        `Unknown command: ${command}. Type "help" for available commands.`
-                    );
+            default:
+                console.log(
+                    `Unknown command: ${command}. Type "help" for available commands.`
+                );
             }
         } catch (error) {
             console.error(error.message);
@@ -626,18 +626,18 @@ function startCLI() {
         rl.prompt();
     });
 
-    async function addUser(username, password, isAdmin = "false") {
+    async function addUser(username, password, isAdmin = 'false') {
         if (!username) {
-            console.log("Usage: add-user <username> [password] [admin]");
+            console.log('Usage: add-user <username> [password] [admin]');
             return;
         }
 
         const existing = await database.query(
-            "SELECT id FROM users WHERE username = ?",
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
         if (existing.length > 0) {
-            console.log("User already exists");
+            console.log('User already exists');
             return;
         }
 
@@ -647,14 +647,14 @@ function startCLI() {
         }
 
         const result = await database.query(
-            "INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)",
-            [username, passwordHash, isAdmin === "true"]
+            'INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)',
+            [username, passwordHash, isAdmin === 'true']
         );
 
         console.log(`User '${username}' created with ID ${result.insertId}`);
         if (!password) {
             console.log(
-                "No password set - user must set password via web interface"
+                'No password set - user must set password via web interface'
             );
         }
     }
@@ -669,25 +669,25 @@ function startCLI() {
             ORDER BY u.created_at DESC
         `);
 
-        console.log("\n=== Users ===");
+        console.log('\n=== Users ===');
         console.log(
-            "ID | Username | Display Name | Admin | Songs | Created | Last Login"
+            'ID | Username | Display Name | Admin | Songs | Created | Last Login'
         );
         console.log(
-            "---|----------|--------------|-------|-------|---------|------------"
+            '---|----------|--------------|-------|-------|---------|------------'
         );
 
         users.forEach((user) => {
             const created = new Date(user.created_at).toLocaleDateString();
             const lastLogin = user.last_login
                 ? new Date(user.last_login).toLocaleDateString()
-                : "Never";
-            const admin = user.is_admin ? "Yes" : "No";
+                : 'Never';
+            const admin = user.is_admin ? 'Yes' : 'No';
 
             console.log(
                 `${user.id.toString().padEnd(2)} | ${user.username.padEnd(
                     8
-                )} | ${(user.display_name || "").padEnd(12)} | ${admin.padEnd(
+                )} | ${(user.display_name || '').padEnd(12)} | ${admin.padEnd(
                     5
                 )} | ${user.song_count.toString().padEnd(5)} | ${created.padEnd(
                     9
@@ -698,77 +698,77 @@ function startCLI() {
 
     async function resetPassword(username, newPassword) {
         if (!username || !newPassword) {
-            console.log("Usage: reset-password <username> <new-password>");
+            console.log('Usage: reset-password <username> <new-password>');
             return;
         }
 
         const users = await database.query(
-            "SELECT id FROM users WHERE username = ?",
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
         if (users.length === 0) {
-            console.log("User not found");
+            console.log('User not found');
             return;
         }
 
         const passwordHash = await bcrypt.hash(newPassword, 10);
         await database.query(
-            "UPDATE users SET password = ? WHERE username = ?",
+            'UPDATE users SET password = ? WHERE username = ?',
             [passwordHash, username]
         );
 
         // Clear all sessions for this user
-        await database.query("DELETE FROM sessions WHERE user_id = ?", [
+        await database.query('DELETE FROM sessions WHERE user_id = ?', [
             users[0].id,
         ]);
 
         console.log(`Password reset for user '${username}'`);
     }
 
-    async function makeAdmin(username, isAdmin = "true") {
+    async function makeAdmin(username, isAdmin = 'true') {
         if (!username) {
-            console.log("Usage: make-admin <username> [true|false]");
+            console.log('Usage: make-admin <username> [true|false]');
             return;
         }
 
         const result = await database.query(
-            "UPDATE users SET is_admin = ? WHERE username = ?",
-            [isAdmin === "true", username]
+            'UPDATE users SET is_admin = ? WHERE username = ?',
+            [isAdmin === 'true', username]
         );
 
         if (result.affectedRows === 0) {
-            console.log("User not found");
+            console.log('User not found');
             return;
         }
 
         console.log(
             `User '${username}' ${
-                isAdmin === "true" ? "granted" : "revoked"
+                isAdmin === 'true' ? 'granted' : 'revoked'
             } admin privileges`
         );
     }
 
     async function showStatus() {
         const [userCount] = await database.query(
-            "SELECT COUNT(*) as count FROM users"
+            'SELECT COUNT(*) as count FROM users'
         );
         const [songCount] = await database.query(
-            "SELECT COUNT(*) as count FROM songs"
+            'SELECT COUNT(*) as count FROM songs'
         );
         const [albumCount] = await database.query(
-            "SELECT COUNT(*) as count FROM albums"
+            'SELECT COUNT(*) as count FROM albums'
         );
         const [artistCount] = await database.query(
-            "SELECT COUNT(*) as count FROM artists"
+            'SELECT COUNT(*) as count FROM artists'
         );
         const [playlistCount] = await database.query(
-            "SELECT COUNT(*) as count FROM playlists"
+            'SELECT COUNT(*) as count FROM playlists'
         );
         const [listenCount] = await database.query(
-            "SELECT COUNT(*) as count FROM song_listens"
+            'SELECT COUNT(*) as count FROM song_listens'
         );
 
-        console.log("\n=== ChillFi3 Server Status ===");
+        console.log('\n=== ChillFi3 Server Status ===');
         console.log(`Users: ${userCount.count}`);
         console.log(`Songs: ${songCount.count}`);
         console.log(`Albums: ${albumCount.count}`);
@@ -788,16 +788,16 @@ function startCLI() {
     }
 
     function showUploads() {
-        console.log("\n=== Active Upload Sessions ===");
-        console.log("No chunked upload sessions (using HTTP uploads)");
+        console.log('\n=== Active Upload Sessions ===');
+        console.log('No chunked upload sessions (using HTTP uploads)');
 
-        console.log("\n=== Active Image Uploads ===");
+        console.log('\n=== Active Image Uploads ===');
 
         if (!imageUploadSessions || imageUploadSessions.size === 0) {
-            console.log("No active image uploads");
+            console.log('No active image uploads');
         } else {
-            console.log("ID | User | Chunks | Progress");
-            console.log("---|------|--------|----------");
+            console.log('ID | User | Chunks | Progress');
+            console.log('---|------|--------|----------');
 
             for (const [uploadId, session] of imageUploadSessions.entries()) {
                 const shortId = uploadId.substring(0, 8);
@@ -817,114 +817,114 @@ function startCLI() {
     async function debugUsers() {
         try {
             const users = await database.query(
-                "SELECT id, username, password IS NOT NULL as has_password, is_admin, created_at FROM users"
+                'SELECT id, username, password IS NOT NULL as has_password, is_admin, created_at FROM users'
             );
-            console.log("\n=== User Debug Info ===");
-            console.log("Total users:", users.length);
+            console.log('\n=== User Debug Info ===');
+            console.log('Total users:', users.length);
 
             if (users.length > 0) {
-                console.log("ID | Username | Has Password | Admin | Created");
-                console.log("---|----------|--------------|-------|--------");
+                console.log('ID | Username | Has Password | Admin | Created');
+                console.log('---|----------|--------------|-------|--------');
                 users.forEach((user) => {
                     const created = new Date(
                         user.created_at
                     ).toLocaleDateString();
                     console.log(
                         `${user.id} | ${user.username} | ${
-                            user.has_password ? "Yes" : "No"
-                        } | ${user.is_admin ? "Yes" : "No"} | ${created}`
+                            user.has_password ? 'Yes' : 'No'
+                        } | ${user.is_admin ? 'Yes' : 'No'} | ${created}`
                     );
                 });
             } else {
-                console.log("No users found. Creating test user...");
-                await addUser("admin", "password", "true");
+                console.log('No users found. Creating test user...');
+                await addUser('admin', 'password', 'true');
             }
         } catch (error) {
-            console.error("Debug users error:", error);
+            console.error('Debug users error:', error);
         }
     }
 
     async function setupDatabase() {
-        console.log("Setting up database with schema...");
+        console.log('Setting up database with schema...');
         try {
-            const { generateSchemaSQL } = require("./database");
+            const { generateSchemaSQL } = require('./database');
             const sql = generateSchemaSQL(schema);
             await database.query(sql);
-            console.log("✅ Database setup completed!");
+            console.log('✅ Database setup completed!');
         } catch (error) {
-            console.error("❌ Database setup failed:", error.message);
+            console.error('❌ Database setup failed:', error.message);
         }
     }
 
     async function migrateDatabase() {
-        console.log("Migrating database...");
+        console.log('Migrating database...');
         try {
             // Check current version
-            let currentVersion = "0.0.0";
+            let currentVersion = '0.0.0';
             try {
                 const result = await database.query(
-                    "SELECT version FROM schema_version ORDER BY applied_at DESC LIMIT 1"
+                    'SELECT version FROM schema_version ORDER BY applied_at DESC LIMIT 1'
                 );
                 if (result.length > 0) currentVersion = result[0].version;
             } catch (error) {
                 await database.query(
-                    "CREATE TABLE IF NOT EXISTS schema_version (id INT AUTO_INCREMENT PRIMARY KEY, version VARCHAR(20) NOT NULL, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+                    'CREATE TABLE IF NOT EXISTS schema_version (id INT AUTO_INCREMENT PRIMARY KEY, version VARCHAR(20) NOT NULL, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'
                 );
             }
 
             if (currentVersion === schema.version) {
-                console.log("✅ Database is up to date!");
+                console.log('✅ Database is up to date!');
                 return;
             }
 
-            const { generateSchemaSQL } = require("./database");
+            const { generateSchemaSQL } = require('./database');
             const sql = generateSchemaSQL(schema);
             await database.query(sql);
             await database.query(
-                "INSERT INTO schema_version (version) VALUES (?)",
+                'INSERT INTO schema_version (version) VALUES (?)',
                 [schema.version]
             );
-            console.log("✅ Database migration completed!");
+            console.log('✅ Database migration completed!');
         } catch (error) {
-            console.error("❌ Migration failed:", error.message);
+            console.error('❌ Migration failed:', error.message);
         }
     }
 
     async function backupDatabase(filename) {
-        const { spawnSync } = require("child_process");
-        const fs = require("fs");
+        const { spawnSync } = require('child_process');
+        const fs = require('fs');
         const backupFile =
             filename ||
             `chillfi3_backup_${new Date().toISOString().slice(0, 10)}.sql`;
         console.log(`Creating backup: ${backupFile}`);
         try {
             const mysqldumpArgs = [
-                "-h",
+                '-h',
                 config.database.host,
-                "-u",
+                '-u',
                 config.database.user,
                 `-p${config.database.password}`,
-                "--single-transaction",
-                "--set-gtid-purged=OFF",
+                '--single-transaction',
+                '--set-gtid-purged=OFF',
                 config.database.database,
             ];
-            const out = fs.openSync(backupFile, "w");
-            const dump = spawnSync("mysqldump", mysqldumpArgs, {
-                stdio: ["ignore", out, "ignore"],
+            const out = fs.openSync(backupFile, 'w');
+            const dump = spawnSync('mysqldump', mysqldumpArgs, {
+                stdio: ['ignore', out, 'ignore'],
             });
             fs.closeSync(out);
             if (dump.error) throw dump.error;
-            if (dump.status !== 0) throw new Error("mysqldump failed");
-            console.log("✅ Backup completed!");
+            if (dump.status !== 0) throw new Error('mysqldump failed');
+            console.log('✅ Backup completed!');
         } catch (error) {
-            console.error("❌ Backup failed:", error.message);
+            console.error('❌ Backup failed:', error.message);
         }
     }
 
     async function restoreDatabase(filename) {
-        const { execSync } = require("child_process");
+        const { execSync } = require('child_process');
         if (!filename) {
-            console.log("Usage: restore <filename>");
+            console.log('Usage: restore <filename>');
             return;
         }
         console.log(`Restoring from: ${filename}`);
@@ -932,38 +932,38 @@ function startCLI() {
             execSync(
                 `mysql -h ${config.database.host} -u ${config.database.user} -p${config.database.password} ${config.database.database} < ${filename} 2>/dev/null`
             );
-            console.log("✅ Restore completed!");
+            console.log('✅ Restore completed!');
         } catch (error) {
-            console.error("❌ Restore failed:", error.message);
+            console.error('❌ Restore failed:', error.message);
         }
     }
 
     async function createAdmin(username, password) {
         if (!username || !password) {
-            console.log("Usage: create-admin <username> <password>");
+            console.log('Usage: create-admin <username> <password>');
             return;
         }
 
         try {
             const existing = await database.query(
-                "SELECT id FROM users WHERE username = ?",
+                'SELECT id FROM users WHERE username = ?',
                 [username]
             );
             if (existing.length > 0) {
-                console.log("❌ User already exists!");
+                console.log('❌ User already exists!');
                 return;
             }
 
             const passwordHash = await bcrypt.hash(password, 10);
             const result = await database.query(
-                "INSERT INTO users (username, password, is_admin) VALUES (?, ?, TRUE)",
+                'INSERT INTO users (username, password, is_admin) VALUES (?, ?, TRUE)',
                 [username, passwordHash]
             );
             console.log(
                 `✅ Admin user '${username}' created with ID ${result.insertId}`
             );
         } catch (error) {
-            console.error("❌ Error creating admin:", error.message);
+            console.error('❌ Error creating admin:', error.message);
         }
     }
 }

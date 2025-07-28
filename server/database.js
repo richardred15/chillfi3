@@ -1,14 +1,13 @@
 /**
  * Database Connection and Schema Management
  */
-require("dotenv").config();
-const mysql = require("mysql2/promise");
-const config = require("./config");
-const schema = require("./schema.json");
+require('dotenv').config();
+const mysql = require('mysql2/promise');
+const config = require('./config');
+const schema = require('./schema.json');
 const {
     validateQueryParams,
-    detectSQLInjection,
-} = require("./middleware/sqlSecurity");
+} = require('./middleware/sqlSecurity');
 
 const dbConfig = {
     host: config.database.host,
@@ -16,7 +15,7 @@ const dbConfig = {
     user: config.database.user,
     password: config.database.password,
     database: config.database.database,
-    charset: "utf8mb4",
+    charset: 'utf8mb4',
 };
 
 let pool;
@@ -24,11 +23,11 @@ let pool;
 // Initialize database connection pool and schema
 async function init() {
     try {
-        console.log("Database config:", {
+        console.log('Database config:', {
             host: dbConfig.host,
             port: dbConfig.port,
             user: dbConfig.user,
-            password: dbConfig.password ? "SET" : "NOT SET",
+            password: dbConfig.password ? 'SET' : 'NOT SET',
             database: dbConfig.database,
         });
 
@@ -41,7 +40,7 @@ async function init() {
         // Create database if it doesn't exist
         // Validate database name as an identifier (alphanumeric and underscores only)
         if (!/^[a-zA-Z0-9_]+$/.test(dbConfig.database)) {
-            throw new Error("Invalid database name in config");
+            throw new Error('Invalid database name in config');
         }
         await tempConnection.execute(
             `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
@@ -58,10 +57,10 @@ async function init() {
         // Create tables using schema
         await createTablesFromSchema();
 
-        console.log("Database pool established");
+        console.log('Database pool established');
         return pool;
     } catch (error) {
-        console.error("Database initialization error:", error);
+        console.error('Database initialization error:', error);
         throw error;
     }
 }
@@ -71,7 +70,7 @@ async function createTablesFromSchema() {
     const sql = generateSchemaSQL(schema);
 
     // Split SQL into individual statements and execute
-    const statements = sql.split(";").filter((stmt) => stmt.trim());
+    const statements = sql.split(';').filter((stmt) => stmt.trim());
 
     for (const statement of statements) {
         try {
@@ -79,25 +78,25 @@ async function createTablesFromSchema() {
         } catch (error) {
             // Ignore duplicate key/index errors and table exists errors
             if (
-                error.code !== "ER_DUP_KEYNAME" &&
-                error.code !== "ER_TABLE_EXISTS_ERROR" &&
-                error.code !== "ER_DUP_KEY" &&
-                !error.message.includes("Duplicate key name")
+                error.code !== 'ER_DUP_KEYNAME' &&
+                error.code !== 'ER_TABLE_EXISTS_ERROR' &&
+                error.code !== 'ER_DUP_KEY' &&
+                !error.message.includes('Duplicate key name')
             ) {
                 console.error(
-                    "Error executing statement:",
-                    statement.substring(0, 50) + "...",
+                    'Error executing statement:',
+                    statement.substring(0, 50) + '...',
                     error.message
                 );
             }
         }
     }
 
-    console.log("Database tables created/verified from schema");
+    console.log('Database tables created/verified from schema');
 }
 
 function generateSchemaSQL(schema) {
-    let sql = "";
+    let sql = '';
 
     for (const [tableName, tableSchema] of Object.entries(schema.tables)) {
         sql += `CREATE TABLE IF NOT EXISTS ${tableName} (\n`;
@@ -108,23 +107,23 @@ function generateSchemaSQL(schema) {
         )) {
             let columnDef = `  ${columnName} ${columnSchema.type}`;
 
-            if (columnSchema.autoIncrement) columnDef += " AUTO_INCREMENT";
+            if (columnSchema.autoIncrement) columnDef += ' AUTO_INCREMENT';
             if (columnSchema.notNull || columnSchema.nullable === false)
-                columnDef += " NOT NULL";
-            if (columnSchema.unique) columnDef += " UNIQUE";
+                columnDef += ' NOT NULL';
+            if (columnSchema.unique) columnDef += ' UNIQUE';
             if (columnSchema.default !== undefined)
                 columnDef += ` DEFAULT ${columnSchema.default}`;
 
             columnDefs.push(columnDef);
         }
 
-        sql += columnDefs.join(",\n");
+        sql += columnDefs.join(',\n');
 
         // Add primary key
         if (tableSchema.primaryKey) {
             if (Array.isArray(tableSchema.primaryKey)) {
                 sql += `,\n  PRIMARY KEY (${tableSchema.primaryKey.join(
-                    ", "
+                    ', '
                 )})`;
             }
         } else {
@@ -146,17 +145,17 @@ function generateSchemaSQL(schema) {
             }
         }
 
-        sql += "\n);\n\n";
+        sql += '\n);\n\n';
 
         // Add indexes (handled separately to avoid IF NOT EXISTS issues)
         if (tableSchema.indexes) {
             for (const index of tableSchema.indexes) {
-                const indexType = index.unique ? "UNIQUE INDEX" : "INDEX";
+                const indexType = index.unique ? 'UNIQUE INDEX' : 'INDEX';
                 sql += `CREATE ${indexType} ${
                     index.name
-                } ON ${tableName} (${index.columns.join(", ")});\n`;
+                } ON ${tableName} (${index.columns.join(', ')});\n`;
             }
-            sql += "\n";
+            sql += '\n';
         }
     }
 
@@ -166,7 +165,7 @@ function generateSchemaSQL(schema) {
 // Get database connection pool
 function getConnection() {
     if (!pool) {
-        throw new Error("Database not initialized");
+        throw new Error('Database not initialized');
     }
     return pool;
 }
@@ -178,13 +177,13 @@ async function query(sql, params = []) {
         // Only validate parameters for SQL injection, not the query itself
         // Pass context for auth-related queries
         const context =
-            sql.includes("sessions") || sql.includes("users") ? "auth" : "";
+            sql.includes('sessions') || sql.includes('users') ? 'auth' : '';
         if (!validateQueryParams(params, context)) {
             console.error(
-                "Potential SQL injection detected in parameters:",
+                'Potential SQL injection detected in parameters:',
                 params
             );
-            throw new Error("Invalid parameters detected");
+            throw new Error('Invalid parameters detected');
         }
 
         connection = await pool.getConnection();
@@ -192,8 +191,8 @@ async function query(sql, params = []) {
         return results;
     } catch (error) {
         // Don't expose database details in error messages
-        console.error("Database query error:", error.message);
-        throw new Error("Database operation failed");
+        console.error('Database query error:', error.message);
+        throw new Error('Database operation failed');
     } finally {
         if (connection) connection.release();
     }
@@ -203,7 +202,7 @@ async function query(sql, params = []) {
 async function cleanup() {
     if (pool) {
         await pool.end();
-        console.log("Database pool closed");
+        console.log('Database pool closed');
     }
 }
 
