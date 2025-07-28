@@ -13,6 +13,8 @@ class ThemeSwitcher {
         this.isReady = false;
         this.readyCallbacks = [];
         this.themeLoaded = false;
+        this.observer = null;
+        this.updateTimeout = null;
         this.setupAuthenticationListener();
         this.init();
     }
@@ -22,6 +24,7 @@ class ThemeSwitcher {
         this.currentTheme = localStorage.getItem("chillfi-theme") || "default";
         this.loadTheme(this.currentTheme);
         this.createThemeSelector();
+        this.setupDOMObserver();
     }
 
     loadTheme(themeName) {
@@ -100,9 +103,12 @@ class ThemeSwitcher {
         });
     }
 
-    async updateExternalSVGs(primary, secondary) {
+    async updateExternalSVGs(primary, secondary, onlyNew = false) {
         // First pass: find and tag themed SVGs
-        const allSvgImages = document.querySelectorAll('img[src$=".svg"]');
+        const selector = onlyNew
+            ? 'img[src$=".svg"]:not([data-theme-svg])'
+            : 'img[src$=".svg"]';
+        const allSvgImages = document.querySelectorAll(selector);
         allSvgImages.forEach((img) => {
             if (
                 img.src.includes("logo.svg") ||
@@ -114,7 +120,10 @@ class ThemeSwitcher {
                 img.src.includes("upload.svg") ||
                 img.src.includes("queue.svg") ||
                 img.src.includes("volume.svg") ||
-                img.src.includes("activity.svg")
+                img.src.includes("activity.svg") ||
+                img.src.includes("play.svg") ||
+                img.src.includes("share.svg") ||
+                img.src.includes("edit.svg")
             ) {
                 img.dataset.themeSvg = "true";
                 if (!img.dataset.originalSrc) {
@@ -129,11 +138,29 @@ class ThemeSwitcher {
         );
 
         for (const img of themedSvgImages) {
-            const originalSrc = img.dataset.originalSrc;
+            const originalSrc = img.dataset.originalSrc || img.src;
 
             try {
                 const response = await fetch(originalSrc);
                 let svgText = await response.text();
+
+                // Validate that we got SVG content, not HTML
+                if (
+                    svgText.includes("<!DOCTYPE html>") ||
+                    svgText.includes("<html")
+                ) {
+                    console.warn(
+                        "Received HTML instead of SVG for:",
+                        originalSrc
+                    );
+                    continue;
+                }
+
+                // Ensure it contains SVG content
+                if (!svgText.includes("<svg")) {
+                    console.warn("No SVG content found in:", originalSrc);
+                    continue;
+                }
 
                 // Replace hardcoded colors with current theme colors
                 svgText = svgText.replace(/#8C67EF/g, primary);
@@ -253,7 +280,9 @@ class ThemeSwitcher {
     }
 
     cleanupBlobUrls() {
-        const svgImages = document.querySelectorAll("img[data-blob-url]");
+        const svgImages = document.querySelectorAll(
+            'img[data-theme-svg="true"]'
+        );
         svgImages.forEach((img) => {
             if (img.dataset.blobUrl) {
                 URL.revokeObjectURL(img.dataset.blobUrl);
@@ -338,6 +367,72 @@ class ThemeSwitcher {
                 item.innerHTML += '<span class="theme-check">✓</span>';
             }
         });
+    }
+
+    // Setup DOM observer to watch for new SVGs
+    setupDOMObserver() {
+        this.observer = new MutationObserver((mutations) => {
+            let hasNewSVGs = false;
+
+            mutations.forEach((mutation) => {
+                if (mutation.type === "childList") {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // Check if added node is SVG or contains SVGs
+                            if (
+                                node.tagName === "IMG" &&
+                                node.src?.endsWith(".svg")
+                            ) {
+                                hasNewSVGs = true;
+                            } else if (node.querySelectorAll) {
+                                const svgs =
+                                    node.querySelectorAll('img[src$=".svg"]');
+                                if (svgs.length > 0) hasNewSVGs = true;
+                            }
+                        }
+                    });
+                }
+            });
+
+            if (hasNewSVGs) {
+                this.debouncedUpdateNewSVGs();
+            }
+        });
+
+        this.observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+
+    // Debounced update for new SVGs
+    debouncedUpdateNewSVGs() {
+        clearTimeout(this.updateTimeout);
+        this.updateTimeout = setTimeout(() => {
+            this.updateNewSVGs();
+        }, 100);
+    }
+
+    // Update only newly added SVGs
+    async updateNewSVGs() {
+        const computedStyle = getComputedStyle(document.documentElement);
+        const primary = computedStyle
+            .getPropertyValue("--accent-primary")
+            .trim();
+        const secondary = computedStyle
+            .getPropertyValue("--accent-secondary")
+            .trim();
+
+        await this.updateExternalSVGs(primary, secondary, true);
+    }
+
+    // Cleanup observer and timeouts
+    cleanup() {
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+        }
+        clearTimeout(this.updateTimeout);
     }
 }
 
