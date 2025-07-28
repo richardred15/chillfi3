@@ -17,6 +17,12 @@ class API {
     // Initialize connection
     async connect() {
         return new Promise((resolve, reject) => {
+            // Prevent multiple connection attempts
+            if (this.socket && this.socket.connected) {
+                resolve();
+                return;
+            }
+            
             // Disconnect existing socket if present
             if (this.socket) {
                 this.socket.disconnect();
@@ -65,8 +71,9 @@ class API {
                 }
                 if (this.reconnectAttempts === 0) {
                     reject(error);
+                } else {
+                    this.attemptReconnect();
                 }
-                this.attemptReconnect();
             });
         });
     }

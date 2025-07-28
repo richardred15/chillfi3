@@ -1,9 +1,8 @@
 // Service Worker for ChillFi3 - Cache Busting + Offline Support
-const CACHE_NAME = 'chillfi3-v3';
-const API_CACHE_NAME = 'chillfi3-api-v2';
-const AUDIO_CACHE_NAME = 'chillfi3-audio-v2';
-
 let currentVersion = '1.0.1';
+let CACHE_NAME = `chillfi3-v${currentVersion}`;
+let API_CACHE_NAME = `chillfi3-api-v${currentVersion}`;
+let AUDIO_CACHE_NAME = `chillfi3-audio-v${currentVersion}`;
 
 const STATIC_ASSETS = [
     '/',
@@ -54,8 +53,27 @@ self.addEventListener('activate', (event) => {
 // Listen for version updates and cache control
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'VERSION_UPDATE') {
+        const oldVersion = currentVersion;
         currentVersion = event.data.version;
-        console.log('Service Worker: Version updated to', currentVersion);
+        
+        // Update cache names with new version
+        CACHE_NAME = `chillfi3-v${currentVersion}`;
+        API_CACHE_NAME = `chillfi3-api-v${currentVersion}`;
+        AUDIO_CACHE_NAME = `chillfi3-audio-v${currentVersion}`;
+        
+        console.log('Service Worker: Version updated from', oldVersion, 'to', currentVersion);
+        
+        // Clear old caches when version changes
+        if (oldVersion !== currentVersion) {
+            caches.keys().then(cacheNames => {
+                const oldCaches = cacheNames.filter(name => 
+                    name.includes('chillfi3') && !name.includes(currentVersion)
+                );
+                return Promise.all(oldCaches.map(name => caches.delete(name)));
+            }).then(() => {
+                console.log('Service Worker: Old caches cleared for version update');
+            });
+        }
     } else if (event.data && event.data.type === 'CLEAR_CACHE') {
         // Clear all caches when requested
         caches.keys().then(cacheNames => {

@@ -20,7 +20,15 @@ export default class Visualizer {
         this.smoothedDataArray = null;
         this.waveformTrails = [];
         this.debugLogged = false;
-        this.mountainRenderer = new MountainRenderer();
+        this.mountainRenderer = new MountainRenderer(this.performanceMode);
+        
+        // Performance settings
+        this.performanceMode = this.detectPerformanceMode();
+        console.log('Visualizer performance mode:', this.performanceMode);
+        // Only limit FPS on low performance mode
+        this.targetFPS = this.performanceMode === 'low' ? 30 : 60;
+        this.frameInterval = this.performanceMode === 'low' ? 1000 / 30 : 0;
+        this.lastFrameTime = 0;
         
         // FPS tracking
         this.frameCount = 0;
@@ -33,8 +41,10 @@ export default class Visualizer {
         this.nowPlayingPopup = null;
         this.visualizerButton = null;
 
-        // Load sun image
-        this.loadSunImage();
+        // Load sun image only if not low performance
+        if (this.performanceMode !== 'low') {
+            this.loadSunImage();
+        }
 
         this.init();
     }
@@ -68,9 +78,13 @@ export default class Visualizer {
 
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * window.devicePixelRatio;
-        this.canvas.height = rect.height * window.devicePixelRatio;
-        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        // Reduce pixel ratio on low performance devices
+        const pixelRatio = this.performanceMode === 'low' ? 1 : 
+                          Math.min(window.devicePixelRatio, 2);
+        
+        this.canvas.width = rect.width * pixelRatio;
+        this.canvas.height = rect.height * pixelRatio;
+        this.ctx.scale(pixelRatio, pixelRatio);
         this.canvas.style.width = rect.width + "px";
         this.canvas.style.height = rect.height + "px";
     }
@@ -148,27 +162,34 @@ export default class Visualizer {
 
     initParticles() {
         this.particles = [];
-        const particleCount = 50;
+        // Reduce particles based on performance mode
+        const particleCount = this.performanceMode === 'low' ? 15 : 
+                             this.performanceMode === 'medium' ? 30 : 50;
 
         for (let i = 0; i < particleCount; i++) {
             this.particles.push({
-                x:
-                    (Math.random() * this.canvas.width) /
-                    window.devicePixelRatio,
-                y:
-                    (Math.random() * this.canvas.height) /
-                    window.devicePixelRatio,
+                x: (Math.random() * this.canvas.width) / window.devicePixelRatio,
+                y: (Math.random() * this.canvas.height) / window.devicePixelRatio,
                 vx: (Math.random() - 0.5) * 2,
                 vy: (Math.random() - 0.5) * 2,
                 size: Math.random() * 80 + 60,
                 opacity: Math.random() * 0.3 + 0.2,
-                frequency: Math.floor(Math.random() * 64), // Limit to 15kHz range
+                frequency: Math.floor(Math.random() * 64),
             });
         }
     }
 
-    animate() {
+    animate(currentTime = performance.now()) {
         if (!this.isActive) return;
+
+        // Frame rate limiting only for low performance devices
+        if (this.frameInterval > 0 && currentTime - this.lastFrameTime < this.frameInterval) {
+            this.animationId = requestAnimationFrame((time) => this.animate(time));
+            return;
+        }
+        if (this.frameInterval > 0) {
+            this.lastFrameTime = currentTime;
+        }
 
         // Get frequency data from player
         this.dataArray = this.player.getFrequencyData();
@@ -184,27 +205,42 @@ export default class Visualizer {
         // Draw waveform (real or fallback)
         if (this.dataArray && this.player.isAudioAnalysisReady()) {
             this.applyWaveformHysteresis();
-            this.drawWaveformTrails();
+            
+            // Skip trails on low performance
+            if (this.performanceMode !== 'low') {
+                this.drawWaveformTrails();
+            }
+            
             this.drawWaveformWithGlow();
             this.updateParticles();
         } else {
             this.drawTimeBasedWaveformWithGlow();
             this.updateTimeBasedParticles();
         }
-        this.drawSun();
+        
+        // Skip sun on low performance
+        if (this.performanceMode !== 'low') {
+            this.drawSun();
+        }
 
-        // Draw lofi effects
+        // Draw lofi effects with reduced complexity
         this.mountainRenderer.render(
             this.ctx,
             this.canvas.width / window.devicePixelRatio,
             this.canvas.height / window.devicePixelRatio,
             Date.now() * 0.001,
-            this.getThemeColor("--accent-primary", "#8C67EF")
+            this.getThemeColor("--accent-primary", "#8C67EF"),
+            this.performanceMode
         );
-        this.drawScanlines();
+        
+        // Skip scanlines on low performance
+        if (this.performanceMode !== 'low') {
+            this.drawScanlines();
+        }
+        
         this.drawFPS();
 
-        this.animationId = requestAnimationFrame(() => this.animate());
+        this.animationId = requestAnimationFrame((time) => this.animate(time));
     }
 
     drawWaveform() {
@@ -344,32 +380,37 @@ export default class Visualizer {
 
             // Much larger particles with lower opacity
             const dynamicSize = particle.size * (1.5 + frequencyValue * 0.5);
-            const dynamicOpacity =
-                particle.opacity * (0.05 + frequencyValue * 0.1);
+            const dynamicOpacity = particle.opacity * (0.05 + frequencyValue * 0.1);
 
-            // Create radial gradient for particle
-            const gradient = this.ctx.createRadialGradient(
-                particle.x,
-                particle.y,
-                0,
-                particle.x,
-                particle.y,
-                dynamicSize
-            );
+            // Skip gradient on low performance - use solid color
+            if (this.performanceMode === 'low') {
+                const color = particle.frequency < this.dataArray.length / 2 ? primaryColor : accentColor;
+                this.ctx.fillStyle = this.hexToRgba(color, dynamicOpacity * 0.3);
+                this.ctx.beginPath();
+                this.ctx.arc(particle.x, particle.y, dynamicSize * 0.7, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else {
+                // Create radial gradient for particle
+                const gradient = this.ctx.createRadialGradient(
+                    particle.x,
+                    particle.y,
+                    0,
+                    particle.x,
+                    particle.y,
+                    dynamicSize
+                );
 
-            // Use different colors based on frequency range
-            const color =
-                particle.frequency < this.dataArray.length / 2
-                    ? primaryColor
-                    : accentColor;
-            gradient.addColorStop(0, this.hexToRgba(color, dynamicOpacity));
-            gradient.addColorStop(1, this.hexToRgba(color, 0)); // Fade to transparent
+                // Use different colors based on frequency range
+                const color = particle.frequency < this.dataArray.length / 2 ? primaryColor : accentColor;
+                gradient.addColorStop(0, this.hexToRgba(color, dynamicOpacity));
+                gradient.addColorStop(1, this.hexToRgba(color, 0));
 
-            // Draw particle
-            this.ctx.beginPath();
-            this.ctx.arc(particle.x, particle.y, dynamicSize, 0, Math.PI * 2);
-            this.ctx.fillStyle = gradient;
-            this.ctx.fill();
+                // Draw particle
+                this.ctx.beginPath();
+                this.ctx.arc(particle.x, particle.y, dynamicSize, 0, Math.PI * 2);
+                this.ctx.fillStyle = gradient;
+                this.ctx.fill();
+            }
         });
     }
 
@@ -450,16 +491,19 @@ export default class Visualizer {
             this.previousDataArray[i] = this.smoothedDataArray[i];
         }
 
-        // Add current waveform to trails
-        this.waveformTrails.push({
-            data: new Uint8Array(this.smoothedDataArray),
-            opacity: 1.0,
-            timestamp: Date.now(),
-        });
+        // Add current waveform to trails (reduced for performance)
+        if (this.performanceMode !== 'low') {
+            this.waveformTrails.push({
+                data: new Uint8Array(this.smoothedDataArray),
+                opacity: 1.0,
+                timestamp: Date.now(),
+            });
 
-        // Remove old trails (keep last 8 frames)
-        if (this.waveformTrails.length > 8) {
-            this.waveformTrails.shift();
+            // Keep fewer trails on medium performance
+            const maxTrails = this.performanceMode === 'medium' ? 4 : 8;
+            if (this.waveformTrails.length > maxTrails) {
+                this.waveformTrails.shift();
+            }
         }
     }
 
@@ -675,6 +719,46 @@ export default class Visualizer {
         this.ctx.font = '14px monospace';
         this.ctx.fillText(`FPS: ${this.fps}`, 20, 30);
         this.ctx.restore();
+    }
+
+    detectPerformanceMode() {
+        // Detect device performance based on various factors
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        
+        let score = 50; // Start with medium baseline
+        
+        // Check hardware concurrency (CPU cores)
+        if (navigator.hardwareConcurrency) {
+            score += Math.min(navigator.hardwareConcurrency, 8) * 15;
+        }
+        
+        // Check device memory (if available)
+        if (navigator.deviceMemory) {
+            score += Math.min(navigator.deviceMemory, 8) * 10;
+        }
+        
+        // Check WebGL capabilities
+        if (gl) {
+            score += 20; // WebGL support bonus
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                if (renderer.includes('Intel HD') || renderer.includes('Intel(R) HD')) {
+                    score -= 15; // Only penalize old Intel HD graphics
+                }
+            }
+        }
+        
+        // Check if mobile device (but be less aggressive)
+        if (/Mobi|Android/i.test(navigator.userAgent)) {
+            score -= 20;
+        }
+        
+        // Be more conservative - most devices should be medium or high
+        if (score < 30) return 'low';
+        if (score < 90) return 'medium';
+        return 'high';
     }
 
     hexToRgba(hex, alpha) {

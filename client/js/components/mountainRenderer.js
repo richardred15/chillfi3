@@ -3,10 +3,11 @@
  * Simple static wireframe mountain
  */
 export default class MountainRenderer {
-    constructor() {
+    constructor(performanceMode = 'high') {
         this.mountain = null;
         this.cameraZ = 0;
         this.gridCache = new Map(); // Cache generated grid points
+        this.performanceMode = performanceMode;
     }
     
     generateMountain() {
@@ -15,8 +16,9 @@ export default class MountainRenderer {
     
     updateGrid() {
         const points = [];
-        const gridSize = 48;
-        const viewDistance = 50; // How far ahead/behind to generate
+        // Reduce grid complexity based on performance
+        const gridSize = this.performanceMode === 'medium' ? 32 : 48;
+        const viewDistance = this.performanceMode === 'medium' ? 30 : 50;
         
         // Generate grid around camera position
         const startZ = Math.floor(this.cameraZ - viewDistance / 2);
@@ -86,9 +88,14 @@ export default class MountainRenderer {
         return (n - Math.floor(n)) * 2 - 1; // Return value between -1 and 1
     }
     
-    render(ctx, width, height, time, themeColor) {
+    render(ctx, width, height, time, themeColor, performanceMode = 'high') {
+        // Skip mountain rendering on low performance
+        if (performanceMode === 'low') {
+            return;
+        }
+        
         // Move camera forward
-        this.cameraZ = time * 2; // Adjust speed as needed
+        this.cameraZ = time * 2;
         
         // Update grid based on camera position
         this.updateGrid();
@@ -101,7 +108,7 @@ export default class MountainRenderer {
         ctx.save();
         ctx.strokeStyle = themeColor;
         ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.4;
+        ctx.globalAlpha = performanceMode === 'medium' ? 0.2 : 0.4;
         
         // 3D projection parameters
         const perspective = 200;
