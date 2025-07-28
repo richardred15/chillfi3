@@ -24,6 +24,12 @@ jest.mock('../config', () => ({
         user: 'test',
         password: 'test',
         database: 'test_db'
+    },
+    aws: {
+        region: 'us-west-2',
+        accessKeyId: 'test_key',
+        secretAccessKey: 'test_secret',
+        s3Bucket: 'test-bucket'
     }
 }));
 
