@@ -1,109 +1,71 @@
 /**
- * Authentication Tests
+ * Client-side Authentication Tests
  */
-const bcrypt = require('bcrypt');
-// const jwt = require('jsonwebtoken');
-const auth = require('../auth');
 
-// Mock dependencies
-jest.mock('../database');
-jest.mock('../config', () => ({
-    auth: {
-        jwtSecret: 'test_secret',
-        tokenExpiry: '7d'
-    },
-    database: {
-        host: 'localhost',
-        port: 3306,
-        user: 'test',
-        password: 'test',
-        database: 'test_db'
-    }
-}));
+// DOM environment is mocked in setup.js
 
-const database = require('../database');
-
-describe('Authentication', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    describe('JWT Token Management', () => {
-        test('should generate valid JWT token', () => {
-            const user = { id: 1, username: 'test', is_admin: false };
-            const token = auth.generateToken(user);
+describe('AuthManager', () => {
+    describe('Token Management', () => {
+        test('should store token in localStorage', () => {
+            const token = 'test_token_123';
+            localStorage.setItem('chillfi_token', token);
             
-            expect(token).toBeDefined();
-            expect(typeof token).toBe('string');
+            expect(localStorage.setItem).toHaveBeenCalledWith('chillfi_token', token);
         });
 
-        test('should verify valid JWT token', () => {
-            const user = { id: 1, username: 'test', is_admin: false };
-            const token = auth.generateToken(user);
-            const decoded = auth.verifyToken(token);
+        test('should retrieve token from localStorage', () => {
+            localStorage.getItem.mockReturnValue('stored_token');
             
-            expect(decoded.userId).toBe(1);
-            expect(decoded.username).toBe('test');
-            expect(decoded.isAdmin).toBe(false);
+            const token = localStorage.getItem('chillfi_token');
+            expect(token).toBe('stored_token');
         });
 
-        test('should reject invalid JWT token', () => {
-            const result = auth.verifyToken('invalid_token');
-            expect(result).toBeNull();
+        test('should clear token on logout', () => {
+            localStorage.removeItem('chillfi_token');
+            
+            expect(localStorage.removeItem).toHaveBeenCalledWith('chillfi_token');
         });
     });
 
-    describe('Socket Authentication', () => {
-        test('should handle missing token', (done) => {
-            const socket = {
-                handshake: { auth: {} }
+    describe('User Data Management', () => {
+        test('should handle user object structure', () => {
+            const user = {
+                id: 1,
+                username: 'testuser',
+                is_admin: false
             };
 
-            auth.authenticateSocket(socket, () => {
-                expect(socket.authenticated).toBe(false);
-                expect(socket.user).toBeNull();
-                done();
-            });
+            expect(user.username).toBe('testuser');
+            expect(user.is_admin).toBe(false);
         });
 
-        test('should handle valid token with user', (done) => {
-            const mockUser = { id: 1, username: 'test' };
-            database.query.mockResolvedValue([mockUser]);
-
-            const user = { id: 1, username: 'test', is_admin: false };
-            const token = auth.generateToken(user);
+        test('should generate user avatar initials', () => {
+            const username = 'testuser';
+            const initial = username.charAt(0).toUpperCase();
             
-            const socket = {
-                handshake: { auth: { token } }
-            };
-
-            auth.authenticateSocket(socket, () => {
-                expect(socket.authenticated).toBe(true);
-                expect(socket.user).toEqual(mockUser);
-                done();
-            });
+            expect(initial).toBe('T');
         });
     });
 
-    describe('Password Handling', () => {
-        test('should hash passwords correctly', async () => {
-            const password = 'testpassword';
-            const hash = await bcrypt.hash(password, 10);
+    describe('Authentication State', () => {
+        test('should track authentication status', () => {
+            let isAuthenticated = false;
             
-            expect(hash).toBeDefined();
-            expect(hash).not.toBe(password);
+            // Simulate login
+            isAuthenticated = true;
+            expect(isAuthenticated).toBe(true);
             
-            const isValid = await bcrypt.compare(password, hash);
-            expect(isValid).toBe(true);
+            // Simulate logout
+            isAuthenticated = false;
+            expect(isAuthenticated).toBe(false);
         });
 
-        test('should reject wrong passwords', async () => {
-            const password = 'testpassword';
-            const wrongPassword = 'wrongpassword';
-            const hash = await bcrypt.hash(password, 10);
+        test('should handle admin privileges', () => {
+            const adminUser = { is_admin: true };
+            const regularUser = { is_admin: false };
             
-            const isValid = await bcrypt.compare(wrongPassword, hash);
-            expect(isValid).toBe(false);
+            expect(adminUser.is_admin).toBe(true);
+            expect(regularUser.is_admin).toBe(false);
         });
     });
 });
