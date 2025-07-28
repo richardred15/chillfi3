@@ -53,6 +53,10 @@ build/
 coverage/
 jest-results.json
 
+# Logs
+logs/
+*.log
+
 # SSL certificates
 *.pem
 *.key

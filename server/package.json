@@ -23,6 +23,8 @@
         "jsonwebtoken": "^9.0.2",
         "@aws-sdk/client-s3": "^3.0.0",
         "@aws-sdk/s3-request-presigner": "^3.0.0",
+        "winston": "^3.11.0",
+        "redis": "^4.6.0",
         "validator": "^13.11.0",
         "node-id3": "^0.2.6",
         "cors": "^2.8.5",

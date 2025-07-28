@@ -13,6 +13,8 @@ const helmet = require('helmet');
 // Import modules
 const config = require('./config');
 const database = require('./database');
+const logger = require('./utils/logger');
+const redisService = require('./services/redisService');
 // const songService = require('./services/songService');
 const auth = require('./auth');
 const songs = require('./songs');
@@ -75,7 +77,7 @@ app.use(
             if (allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.warn('CORS blocked origin:', origin);
+                logger.warn('CORS blocked origin', { origin });
                 callback(new Error('Not allowed by CORS'));
             }
         },
@@ -131,7 +133,7 @@ function ogRateLimiter(req, res, next) {
 }
 
 app.get('/api/og/song/:id', ogRateLimiter, async (req, res) => {
-    console.log('OG song request:', req.params.id);
+    logger.info('OG song request', { songId: req.params.id, ip: req.ip });
     try {
         const songId = req.params.id;
         const songs = await database.query(
@@ -157,7 +159,7 @@ app.get('/api/og/song/:id', ogRateLimiter, async (req, res) => {
             image: song.cover_art_url,
         });
     } catch (error) {
-        console.error('Get song OG error:', error);
+        logger.error('Get song OG error', { error: error.message, songId: req.params.id });
         res.status(500).json({ error: 'Failed to get song' });
     }
 });
@@ -310,14 +312,22 @@ const io = new Server(server, {
     },
 });
 
-// Initialize database
+// Initialize database and Redis
 database
     .init()
     .then(() => {
-        console.log('Database initialized successfully');
+        logger.info('Database initialized successfully');
+        return redisService.connect();
+    })
+    .then((redisConnected) => {
+        if (redisConnected) {
+            logger.info('Redis initialized successfully');
+        } else {
+            logger.warn('Redis not available, running without cache');
+        }
     })
     .catch((err) => {
-        console.error('Database initialization failed:', err);
+        logger.error('Database initialization failed', { error: err.message });
         process.exit(1);
     });
 
@@ -326,13 +336,11 @@ io.use(auth.authenticateSocket);
 
 // Socket.IO connection handling with lazy-loading handler registry
 io.on('connection', (socket) => {
-    console.log(
-        'Client connected:',
-        socket.id,
-        socket.authenticated
-            ? `(User: ${socket.user?.username})`
-            : '(Anonymous)'
-    );
+    logger.info('Client connected', {
+        socketId: socket.id,
+        authenticated: socket.authenticated,
+        username: socket.user?.username || 'anonymous'
+    });
 
     // Handler registry for lazy loading
     const handlerRegistry = {
@@ -357,12 +365,12 @@ io.on('connection', (socket) => {
         ) {
             handlerRegistry[namespace]();
             socket.loadedHandlers.add(namespace);
-            console.log(`Loaded ${namespace} handlers for socket ${socket.id}`);
+            logger.debug('Loaded socket handlers', { namespace, socketId: socket.id });
         }
     });
 
     socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        logger.info('Client disconnected', { socketId: socket.id });
         // Clean up socket resources
         if (socket.loadedHandlers) {
             socket.loadedHandlers.clear();
@@ -409,6 +417,13 @@ async function gracefulShutdown(signal) {
         console.error('Error during database cleanup:', error);
     }
 
+    // Close Redis connection
+    try {
+        await redisService.disconnect();
+    } catch (error) {
+        console.error('Error during Redis cleanup:', error);
+    }
+
     // Cleanup upload service
     try {
         const uploadService = require('./services/uploadService');
@@ -428,9 +443,11 @@ async function gracefulShutdown(signal) {
 
 // Start server
 server.listen(PORT, () => {
-    console.log(`ChillFi3 server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log('Type "help" for available commands\n');
+    logger.info('ChillFi3 server started', {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        https: !!httpsOptions
+    });
 
     // Start interactive CLI
     startCLI();
@@ -500,6 +517,7 @@ function startCLI() {
         rl.prompt(true);
     }
 
+    // Override console methods for CLI only
     console.log = (...args) => writeWithPrompt(...args);
     console.error = (...args) => writeWithPrompt('ERROR:', ...args);
     console.warn = (...args) => writeWithPrompt('WARN:', ...args);

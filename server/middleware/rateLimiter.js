@@ -1,8 +1,9 @@
 /**
  * Rate Limiting Middleware
  */
+const redisService = require('../services/redisService');
 
-const rateLimits = new Map();
+const rateLimits = new Map(); // Fallback for when Redis unavailable
 
 const LIMITS = {
     'song:upload': { requests: 50, window: 60000 }, // 50 upload chunks per minute
@@ -24,31 +25,49 @@ function getRateLimit(eventName) {
     return LIMITS[eventName] || LIMITS.default;
 }
 
-function rateLimiter(socket, eventName) {
+async function rateLimiter(socket, eventName) {
     const clientId = socket.handshake.address;
-    const userId = socket.user?.id || clientId; // Use IP for anonymous users
+    const userId = socket.user?.id || clientId;
     
-    // For login attempts, always use IP address
     const keyId = eventName === 'auth:login' ? clientId : userId;
-    const userKey = `${keyId}:${eventName}`;
-    const ipKey = `ip:${clientId}`;
+    const userKey = `rate:${keyId}:${eventName}`;
+    const ipKey = `rate:ip:${clientId}`;
     
     const limit = getRateLimit(eventName);
-    const now = Date.now();
     
-    // Check user-specific rate limit
-    if (!checkLimit(userKey, limit, now)) {
-        console.warn(`Rate limit exceeded for ${eventName === 'auth:login' ? 'IP' : 'user'} ${keyId} on ${eventName}`);
-        return false;
+    // Try Redis first, fallback to memory
+    if (redisService.isConnected()) {
+        const userAllowed = await redisService.checkRateLimit(userKey, limit.requests, Math.floor(limit.window / 1000));
+        if (!userAllowed) {
+            console.warn(`Rate limit exceeded for ${eventName === 'auth:login' ? 'IP' : 'user'} ${keyId} on ${eventName}`);
+            return false;
+        }
+        
+        if (eventName !== 'auth:login') {
+            const ipAllowed = await redisService.checkRateLimit(ipKey, IP_LIMIT.requests, Math.floor(IP_LIMIT.window / 1000));
+            if (!ipAllowed) {
+                console.warn(`IP rate limit exceeded for ${clientId}`);
+                return false;
+            }
+        }
+        
+        return true;
+    } else {
+        // Fallback to memory-based rate limiting
+        const now = Date.now();
+        
+        if (!checkLimit(userKey, limit, now)) {
+            console.warn(`Rate limit exceeded for ${eventName === 'auth:login' ? 'IP' : 'user'} ${keyId} on ${eventName}`);
+            return false;
+        }
+        
+        if (eventName !== 'auth:login' && !checkLimit(ipKey, IP_LIMIT, now)) {
+            console.warn(`IP rate limit exceeded for ${clientId}`);
+            return false;
+        }
+        
+        return true;
     }
-    
-    // Check IP-based global rate limit (skip for login to avoid double-checking)
-    if (eventName !== 'auth:login' && !checkLimit(ipKey, IP_LIMIT, now)) {
-        console.warn(`IP rate limit exceeded for ${clientId}`);
-        return false;
-    }
-    
-    return true;
 }
 
 function checkLimit(key, limit, now) {

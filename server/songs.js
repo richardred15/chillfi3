@@ -50,7 +50,7 @@ function handleSocket(socket, _io) {
     // List songs
     socket.on('song:list', async (data) => {
         try {
-            if (!rateLimiter(socket, 'song:list')) {
+            if (!(await rateLimiter(socket, 'song:list'))) {
                 return error(socket, 'song:list', 'Rate limit exceeded');
             }
 
@@ -83,7 +83,7 @@ function handleSocket(socket, _io) {
                 limit
             );
         } catch (err) {
-            logger.error('List songs error:', err);
+            logger.error('List songs error', { error: err.message, userId: socket.user?.id });
             error(socket, 'song:list', 'Failed to get songs');
         }
     });
@@ -109,7 +109,7 @@ function handleSocket(socket, _io) {
 
             success(socket, 'song:get', { song });
         } catch (err) {
-            logger.error('Get song error:', err);
+            logger.error('Get song error', { error: err.message, songId: data.songId, userId: socket.user?.id });
             error(socket, 'song:get', 'Failed to get song');
         }
     });
@@ -117,7 +117,7 @@ function handleSocket(socket, _io) {
     // Initialize upload session
     socket.on('song:uploadInit', async (data) => {
         try {
-            if (!rateLimiter(socket, 'song:upload')) {
+            if (!(await rateLimiter(socket, 'song:upload'))) {
                 return error(socket, 'song:uploadInit', 'Rate limit exceeded');
             }
 
@@ -138,7 +138,7 @@ function handleSocket(socket, _io) {
 
             success(socket, 'song:uploadInit', { uploadId });
         } catch (err) {
-            logger.error('Upload init error:', err);
+            logger.error('Upload init error', { error: err.message, userId: socket.user?.id });
             error(socket, 'song:uploadInit', 'Failed to initialize upload');
         }
     });
@@ -170,7 +170,7 @@ function handleSocket(socket, _io) {
 
             success(socket, 'song:uploadChunk', songId ? { songId } : null);
         } catch (err) {
-            logger.error('Chunk upload error:', err);
+            logger.error('Chunk upload error', { error: err.message, uploadId: data.uploadId, userId: socket.user?.id });
             error(
                 socket,
                 'song:uploadChunk',
@@ -298,7 +298,7 @@ function handleSocket(socket, _io) {
 
             success(socket, 'song:update', { song: updatedSong });
         } catch (err) {
-            logger.error('Update song error:', err);
+            logger.error('Update song error', { error: err.message, songId: data.songId, userId: socket.user?.id });
             error(
                 socket,
                 'song:update',
@@ -444,7 +444,7 @@ function handleSocket(socket, _io) {
 
             success(socket, 'song:recordListen', { listenCount });
         } catch (err) {
-            logger.error('Record listen error:', err);
+            logger.error('Record listen error', { error: err.message, songId: data.songId, userId: socket.user?.id });
             error(socket, 'song:recordListen', 'Failed to record listen');
         }
     });
@@ -593,7 +593,7 @@ function handleSocket(socket, _io) {
                 limit
             );
         } catch (err) {
-            logger.error('List albums error:', err);
+            logger.error('List albums error', { error: err.message, userId: socket.user?.id });
             error(socket, 'albums:list', 'Failed to get albums');
         }
     });
@@ -601,7 +601,7 @@ function handleSocket(socket, _io) {
     // Search songs
     socket.on('song:search', async (data) => {
         try {
-            if (!rateLimiter(socket, 'song:search')) {
+            if (!(await rateLimiter(socket, 'song:search'))) {
                 return error(socket, 'song:search', 'Rate limit exceeded');
             }
 
