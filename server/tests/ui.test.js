@@ -73,16 +73,14 @@ describe('UI Components', () => {
 
     describe('Event Handling', () => {
         test('should handle click events', () => {
-            let clicked = false;
             const button = document.createElement('button');
+            const clickHandler = jest.fn();
             
             // Mock event listener
-            button.addEventListener('click', () => {
-                clicked = true;
-            });
+            button.addEventListener('click', clickHandler);
             
             // Verify event listener was added
-            expect(button.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
+            expect(button.addEventListener).toHaveBeenCalledWith('click', clickHandler);
         });
 
         test('should handle form data', () => {
