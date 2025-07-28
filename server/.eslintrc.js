@@ -2,7 +2,13 @@ module.exports = {
     env: {
         node: true,
         es2021: true,
-        jest: true
+        jest: true,
+        browser: true
+    },
+    globals: {
+        document: 'readonly',
+        window: 'readonly',
+        localStorage: 'readonly'
     },
     extends: [
         'eslint:recommended'
