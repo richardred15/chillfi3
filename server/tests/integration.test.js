@@ -48,6 +48,7 @@ describe('Integration Tests', () => {
     let mockSocket;
 
     beforeEach(() => {
+        jest.clearAllMocks();
         mockSocket = {
             authenticated: false,
             user: null,
@@ -79,7 +80,9 @@ describe('Integration Tests', () => {
         });
 
         test('should reject invalid credentials', async () => {
-            database.query.mockResolvedValueOnce([]); // No user found
+            // Clear any previous mocks and set fresh mock
+            database.query.mockClear();
+            database.query.mockResolvedValue([]); // No user found
             
             // Test would verify no user found
             const users = await database.query('SELECT * FROM users WHERE username = ?', ['nonexistent']);
@@ -127,7 +130,9 @@ describe('Integration Tests', () => {
 
     describe('Error Handling', () => {
         test('should handle database connection failures', async () => {
-            database.query.mockRejectedValueOnce(new Error('Connection failed'));
+            // Clear any previous mocks and set fresh mock
+            database.query.mockClear();
+            database.query.mockRejectedValue(new Error('Connection failed'));
             
             // Test would verify error handling
             await expect(database.query('SELECT 1')).rejects.toThrow('Connection failed');
