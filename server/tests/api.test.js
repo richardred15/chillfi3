@@ -1,7 +1,7 @@
 /**
  * API Endpoint Tests
  */
-const request = require('supertest');
+// const request = require('supertest');
 
 // Mock config to avoid HTTPS file reading
 jest.mock('../config', () => ({
@@ -34,8 +34,8 @@ jest.mock('../config', () => ({
 }));
 
 // const { app } = require('../server');
-const express = require('express');
-const app = express();
+// const express = require('express');
+// const app = express();
 
 // Mock database
 jest.mock('../database', () => ({
