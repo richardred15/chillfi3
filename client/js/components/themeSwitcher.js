@@ -103,12 +103,9 @@ class ThemeSwitcher {
         });
     }
 
-    async updateExternalSVGs(primary, secondary, onlyNew = false) {
+    async updateExternalSVGs(primary, secondary) {
         // First pass: find and tag themed SVGs
-        const selector = onlyNew
-            ? 'img[src$=".svg"]:not([data-theme-svg])'
-            : 'img[src$=".svg"]';
-        const allSvgImages = document.querySelectorAll(selector);
+        const allSvgImages = document.querySelectorAll('img[src$=".svg"]');
         allSvgImages.forEach((img) => {
             if (
                 img.src.includes("logo.svg") ||
@@ -126,8 +123,11 @@ class ThemeSwitcher {
                 img.src.includes("edit.svg")
             ) {
                 img.dataset.themeSvg = "true";
-                if (!img.dataset.originalSrc && !img.src.startsWith('blob:')) {
-                    img.dataset.originalSrc = img.src;
+                if (!img.dataset.originalSrc) {
+                    // Only set originalSrc if current src is not a blob URL
+                    if (!img.src.startsWith('blob:')) {
+                        img.dataset.originalSrc = img.src;
+                    }
                 }
             }
         });
@@ -140,8 +140,8 @@ class ThemeSwitcher {
         for (const img of themedSvgImages) {
             const originalSrc = img.dataset.originalSrc;
             
-            // Skip if no original source or if it's a blob URL
-            if (!originalSrc || originalSrc.startsWith('blob:')) {
+            // Skip if no original source
+            if (!originalSrc) {
                 continue;
             }
 
@@ -420,15 +420,7 @@ class ThemeSwitcher {
 
     // Update only newly added SVGs
     async updateNewSVGs() {
-        const computedStyle = getComputedStyle(document.documentElement);
-        const primary = computedStyle
-            .getPropertyValue("--accent-primary")
-            .trim();
-        const secondary = computedStyle
-            .getPropertyValue("--accent-secondary")
-            .trim();
-
-        await this.updateExternalSVGs(primary, secondary, true);
+        await this.updateThemeIcons();
     }
 
     // Cleanup observer and timeouts
