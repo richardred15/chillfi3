@@ -40,27 +40,46 @@ jobs:
         cd server
         npm run lint
     
-    - name: Run server tests with coverage
+    - name: Wait for MySQL
+      run: |
+        for i in {30..0}; do
+          if mysqladmin ping -h"127.0.0.1" --silent; then
+            break
+          fi
+          echo 'MySQL is unavailable - sleeping'
+          sleep 1
+        done
+        if [ "$i" = 0 ]; then
+          echo 'MySQL is unavailable - exiting'
+          exit 1
+        fi
+        echo 'MySQL is up - executing command'
+    
+    - name: Run stable tests with coverage
       run: |
         cd server
-        npm run test:coverage
+        npm run test:stable
       env:
+        NODE_ENV: test
         DB_HOST: 127.0.0.1
         DB_USER: root
         DB_PASSWORD: root
         DB_NAME: musiclib_test
-        JWT_SECRET: test_secret
+        JWT_SECRET: test_secret_key_for_testing
+        LOG_LEVEL: ERROR
     
     - name: Run integration tests
       run: |
         cd server
         npm run test:integration
       env:
+        NODE_ENV: test
         DB_HOST: 127.0.0.1
         DB_USER: root
         DB_PASSWORD: root
         DB_NAME: musiclib_test
-        JWT_SECRET: test_secret
+        JWT_SECRET: test_secret_key_for_testing
+        LOG_LEVEL: ERROR
     
 
     - name: Upload coverage reports
