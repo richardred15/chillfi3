@@ -126,7 +126,7 @@ class ThemeSwitcher {
                 img.src.includes("edit.svg")
             ) {
                 img.dataset.themeSvg = "true";
-                if (!img.dataset.originalSrc) {
+                if (!img.dataset.originalSrc && !img.src.startsWith('blob:')) {
                     img.dataset.originalSrc = img.src;
                 }
             }
@@ -138,7 +138,12 @@ class ThemeSwitcher {
         );
 
         for (const img of themedSvgImages) {
-            const originalSrc = img.dataset.originalSrc || img.src;
+            const originalSrc = img.dataset.originalSrc;
+            
+            // Skip if no original source or if it's a blob URL
+            if (!originalSrc || originalSrc.startsWith('blob:')) {
+                continue;
+            }
 
             try {
                 const response = await fetch(originalSrc);
