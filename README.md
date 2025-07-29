@@ -214,7 +214,8 @@ your-bucket-name/
 ├── songs/              # Audio files (MP3, FLAC, etc.)
 ├── song_art/           # Individual song artwork
 ├── album_art/          # Album artwork
-└── artist_images/      # Artist profile images
+├── artist_images/      # Artist profile images
+└── profiles/           # User profile pictures
 ```
 
 ### S3 Bucket Configuration
