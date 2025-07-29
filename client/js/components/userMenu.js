@@ -58,9 +58,56 @@ export default class UserMenu {
         }
     }
     
-    showProfile() {
+    async showProfile() {
         this.profileModal.show();
         this.userDropdown.classList.remove('show');
+        
+        // Load current user profile data
+        await this.loadProfileData();
+    }
+    
+    async loadProfileData() {
+        try {
+            const userId = window.authManager?.user?.id;
+            if (!userId) return;
+            
+            const response = await window.api.getUserProfile(userId);
+            console.log('Profile data loaded:', response);
+            
+            if (response.user) {
+                this.updateProfileDisplay(response.user);
+            }
+        } catch (error) {
+            console.error('Failed to load profile data:', error);
+        }
+    }
+    
+    updateProfileDisplay(user) {
+        // Update profile name
+        const profileName = document.querySelector('.profile-name');
+        if (profileName) {
+            profileName.textContent = user.display_name || user.username;
+        }
+        
+        // Update bio
+        const profileBio = document.querySelector('.profile-bio p');
+        if (profileBio) {
+            profileBio.textContent = user.bio || 'No bio yet';
+        }
+        
+        // Update profile avatar
+        const profileAvatar = document.querySelector('.profile-avatar');
+        if (profileAvatar && user.profile_image_url) {
+            profileAvatar.style.backgroundImage = `url(${user.profile_image_url})`;
+            profileAvatar.style.backgroundSize = 'cover';
+            profileAvatar.style.backgroundPosition = 'center';
+            profileAvatar.textContent = '';
+        } else if (profileAvatar) {
+            // Show initial if no profile image
+            const initial = (user.display_name || user.username || 'U').charAt(0).toUpperCase();
+            profileAvatar.textContent = initial;
+            profileAvatar.style.backgroundImage = '';
+        }
     }
     
     showResetPassword() {
@@ -185,38 +232,91 @@ export default class UserMenu {
     async handleAvatarUpload(file) {
         if (!file) return;
         
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            this.toast.show('Please select an image file');
+            return;
+        }
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            this.toast.show('Image must be smaller than 5MB');
+            return;
+        }
+        
+        const userId = window.authManager?.user?.id;
+        if (!userId) {
+            this.toast.show('User not authenticated');
+            return;
+        }
+        
         try {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const imageFile = {
-                    name: file.name,
-                    type: file.type,
-                    data: e.target.result
-                };
+            // Show loading state
+            this.toast.show('Uploading avatar...');
+            
+            // Use the chunked image upload system
+            const uploadId = `avatar_${userId}_${Date.now()}`;
+            const response = await this.uploadImageInChunks(file, uploadId, 'profiles');
+            
+            if (response.success) {
+                // Update user profile with new image URL
+                const updateResponse = await window.api.updateUser(userId, { 
+                    profile_image_url: response.imageUrl 
+                });
                 
-                const userId = window.authManager?.user?.id;
-                console.log('Avatar upload - userId:', userId);
-                console.log('Avatar upload - imageFile:', { name: imageFile.name, type: imageFile.type, dataLength: imageFile.data.length });
-                
-                if (!userId) {
-                    this.toast.show('User not authenticated');
-                    return;
-                }
-                
-                const response = await window.api.uploadAvatar(userId, imageFile);
-                console.log('Avatar upload response:', response);
-                
-                if (response.success) {
-                    this.updateAvatarDisplay(response.profileImageUrl);
+                if (updateResponse.success) {
+                    this.updateAvatarDisplay(response.imageUrl);
                     this.toast.show('Avatar updated successfully');
                 } else {
-                    this.toast.show(response.message || 'Failed to update avatar');
+                    this.toast.show('Failed to update profile');
                 }
-            };
-            reader.readAsDataURL(file);
+            } else {
+                this.toast.show(response.message || 'Failed to upload avatar');
+            }
         } catch (error) {
             console.error('Avatar upload error:', error);
             this.toast.show('Failed to upload avatar');
+        }
+    }
+    
+    async uploadImageInChunks(file, uploadId, folder = 'profiles') {
+        const CHUNK_SIZE = 64 * 1024; // 64KB chunks
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        
+        try {
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+                
+                // Convert chunk to base64
+                const chunkData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(chunk);
+                });
+                
+                const response = await window.api.uploadImageChunk({
+                    uploadId,
+                    chunkIndex,
+                    totalChunks,
+                    data: chunkData,
+                    filename: `${folder}/${uploadId}.${file.name.split('.').pop()}`,
+                    mimeType: file.type
+                });
+                
+                if (!response.success) {
+                    throw new Error(response.message || 'Chunk upload failed');
+                }
+                
+                // Return final response if this was the last chunk
+                if (response.imageUrl) {
+                    return response;
+                }
+            }
+        } catch (error) {
+            console.error('Chunked upload error:', error);
+            throw error;
         }
     }
     

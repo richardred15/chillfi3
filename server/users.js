@@ -132,7 +132,7 @@ function handleSocket(socket, _io) {
                 });
             }
             
-            const allowedFields = ['username', 'display_name', 'bio'];
+            const allowedFields = ['username', 'display_name', 'bio', 'profile_image_url'];
             const updateFields = [];
             const updateValues = [];
             
@@ -201,8 +201,16 @@ function handleSocket(socket, _io) {
     
     // Upload avatar
     socket.on('user:uploadAvatar', async (data) => {
+        console.log('Avatar upload request received:', {
+            userId: data?.userId,
+            hasImageFile: !!data?.imageFile,
+            socketUserId: socket.user?.id,
+            authenticated: socket.authenticated
+        });
+        
         try {
             if (!socket.authenticated) {
+                console.log('Avatar upload failed: not authenticated');
                 return socket.emit('user:uploadAvatar', { 
                     success: false, 
                     message: 'Authentication required' 
@@ -213,6 +221,7 @@ function handleSocket(socket, _io) {
             
             // Check permissions
             if (socket.user.id !== userId && !socket.user.is_admin) {
+                console.log('Avatar upload failed: unauthorized', { socketUserId: socket.user.id, requestedUserId: userId });
                 return socket.emit('user:uploadAvatar', { 
                     success: false, 
                     message: 'Unauthorized' 
@@ -220,18 +229,24 @@ function handleSocket(socket, _io) {
             }
             
             if (!imageFile) {
+                console.log('Avatar upload failed: no image file');
                 return socket.emit('user:uploadAvatar', { 
                     success: false, 
                     message: 'Image file required' 
                 });
             }
             
+            console.log('Processing avatar upload for user:', userId);
+            
             // Generate unique filename
             const fileExtension = imageFile.name.split('.').pop();
             const fileName = `profiles/${userId}_${Date.now()}.${fileExtension}`;
+            console.log('Generated filename:', fileName);
             
             // Upload to S3
             const base64Data = imageFile.data.split(',')[1] || imageFile.data;
+            console.log('Base64 data length:', base64Data.length);
+            
             const uploadCommand = new PutObjectCommand({
                 Bucket: BUCKET_NAME,
                 Key: fileName,
@@ -239,28 +254,36 @@ function handleSocket(socket, _io) {
                 ContentType: imageFile.type
             });
             
+            console.log('Uploading to S3...');
             await s3Client.send(uploadCommand);
             const profileImageUrl = `https://${BUCKET_NAME}.s3.${config.aws.region}.amazonaws.com/${fileName}`;
+            console.log('S3 upload successful, URL:', profileImageUrl);
             
             // Update user profile
-            await database.query(
+            console.log('Updating database...');
+            const dbResult = await database.query(
                 'UPDATE users SET profile_image_url = ? WHERE id = ?',
                 [profileImageUrl, userId]
             );
+            console.log('Database update result:', dbResult);
             
             // Generate secure URL for response
             const secureUrl = await secureProfileImage(profileImageUrl);
+            console.log('Generated secure URL:', secureUrl);
             
             socket.emit('user:uploadAvatar', {
                 success: true,
                 profileImageUrl: secureUrl
             });
             
+            console.log('Avatar upload completed successfully');
+            
         } catch (error) {
             console.error('Upload avatar error:', error);
+            console.error('Error stack:', error.stack);
             socket.emit('user:uploadAvatar', { 
                 success: false, 
-                message: 'Failed to upload avatar' 
+                message: 'Failed to upload avatar: ' + error.message 
             });
         }
     });
