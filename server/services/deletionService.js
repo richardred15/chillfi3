@@ -1,7 +1,7 @@
 /**
  * Deletion Service - Handles deletion of songs, albums, and artists with S3 cleanup
  */
-const { S3Client, DeleteObjectCommand, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const database = require('../database');
 const logger = require('../utils/logger');
 const config = require('../config');
@@ -144,7 +144,7 @@ async function deleteAlbum(albumId, userId, isAdmin = false) {
                 songIds
             );
             await database.query(
-                `DELETE FROM songs WHERE album_id = ?`,
+                'DELETE FROM songs WHERE album_id = ?',
                 [albumId]
             );
         }

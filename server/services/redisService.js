@@ -2,7 +2,7 @@
  * Redis Service for Caching and Sessions
  */
 const redis = require('redis');
-const config = require('../config');
+// const config = require('../config');
 const logger = require('../utils/logger');
 
 class RedisService {

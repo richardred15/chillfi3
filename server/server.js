@@ -505,14 +505,14 @@ function startCLI() {
     const readline = require('readline');
     const bcrypt = require('bcrypt');
 
-    let uploadSessions, imageUploadSessions;
+    let imageUploadSessions;
     try {
         const uploadService = require('./services/uploadService');
-        uploadSessions = uploadService.uploadSessions;
+        // uploadSessions = uploadService.uploadSessions;
         imageUploadSessions = uploadService.imageUploadSessions;
     } catch (error) {
         console.log('Upload service not available');
-        uploadSessions = new Map();
+        // uploadSessions = new Map();
         imageUploadSessions = new Map();
     }
 

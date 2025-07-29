@@ -6,11 +6,11 @@
  * socket event handlers for client interactions.
  */
 require('dotenv').config({ path: __dirname + '/.env' });
-const {
-    S3Client,
-    DeleteObjectCommand,
-} = require('@aws-sdk/client-s3');
-const config = require('./config');
+// const {
+//     S3Client,
+//     DeleteObjectCommand,
+// } = require('@aws-sdk/client-s3');
+// const config = require('./config');
 const database = require('./database');
 const logger = require('./utils/logger');
 const { success, error, paginated } = require('./utils/response');
@@ -21,14 +21,14 @@ const deletionService = require('./services/deletionService');
 const { generateSecureUrl } = uploadService;
 const { extractS3Key, secureImageUrl } = require('./utils/s3Utils');
 
-const s3Client = new S3Client({
-    region: config.aws.region,
-    credentials: {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
-    },
-});
-const BUCKET_NAME = config.aws.s3Bucket;
+// const s3Client = new S3Client({
+//     region: config.aws.region,
+//     credentials: {
+//         accessKeyId: config.aws.accessKeyId,
+//         secretAccessKey: config.aws.secretAccessKey,
+//     },
+// });
+// const BUCKET_NAME = config.aws.s3Bucket;
 
 // Get upload sessions from uploadService
 const { imageUploadSessions } = uploadService;
