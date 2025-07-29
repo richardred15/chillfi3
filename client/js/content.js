@@ -25,6 +25,12 @@ class ContentManager {
     async init() {
         const errorHandler = window.errorHandler;
         try {
+            // Hide all sections initially to prevent flicker
+            this.showSection();
+            
+            // Hide all sections initially to prevent flicker
+            this.hideAllSections();
+            
             await this.loadAllSongs();
             this.renderHomeSections();
             this.setupSearch();
@@ -494,52 +500,25 @@ class ContentManager {
 
     // Get artists for a user
     async getUserArtists(username, page = 1, limit = 24) {
-        const response = await this.api.getSongs(
-            { uploadedBy: username },
-            1,
-            1000
-        ); // Get all songs
-        const songs = response.data?.items || response.songs || [];
+        try {
+            const response = await this.api.getArtists(page, limit);
+            const artists = response.data?.items || response.artists || [];
+            const total =
+                response.data?.pagination?.total || response.total || 0;
 
-        // Group songs by artist
-        const artistMap = new Map();
-        songs.forEach((song) => {
-            const artistName = song.artist || "Unknown Artist";
-            if (!artistMap.has(artistName)) {
-                artistMap.set(artistName, {
-                    name: artistName,
-                    albums: new Set(),
-                    songCount: 0,
-                    artwork: song.cover_art_url,
-                });
-            }
-            const artist = artistMap.get(artistName);
-            artist.albums.add(song.album || "Unknown Album");
-            artist.songCount++;
-            if (!artist.artwork && song.cover_art_url) {
-                artist.artwork = song.cover_art_url;
-            }
-        });
-
-        // Convert to array and add album count
-        const artists = Array.from(artistMap.values()).map((artist) => ({
-            ...artist,
-            albumCount: artist.albums.size,
-            albums: undefined, // Remove Set object
-        }));
-
-        // Sort by song count (most popular first)
-        artists.sort((a, b) => b.songCount - a.songCount);
-
-        // Apply pagination
-        const offset = (page - 1) * limit;
-        const paginatedArtists = artists.slice(offset, offset + limit);
-
-        return {
-            artists: paginatedArtists,
-            total: artists.length,
-            page,
-        };
+            return {
+                artists,
+                total,
+                page,
+            };
+        } catch (error) {
+            console.error("Failed to get artists:", error);
+            return {
+                artists: [],
+                total: 0,
+                page,
+            };
+        }
     }
 
     // Show artists section
@@ -587,14 +566,13 @@ class ContentManager {
         artistsData.artists.forEach((artist) => {
             const card = document.createElement("div");
             card.className = "card";
-            card.dataset.artistName = artist.name;
-            //card.dataset.songId = `artist_${artist.name}`; // For context menu
-            console.log("Artist:", artist);
-            card.dataset.type = "artist";
-            card.dataset.albumTitle = artist.name; // For context menu title (artists use albumTitle field)
+            card.dataset.itemId = artist.id; // Real database ID
+            card.dataset.itemType = "artist";
+            card.dataset.itemTitle = artist.name;
+            card.dataset.itemArtist = artist.name; // For consistency
 
-            const artworkStyle = artist.artwork
-                ? `background: url(${artist.artwork}) center/cover no-repeat`
+            const artworkStyle = artist.cover_art_url
+                ? `background: url(${artist.cover_art_url}) center/cover no-repeat`
                 : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
 
             card.innerHTML = `
@@ -617,7 +595,7 @@ class ContentManager {
                 const username = context.includes("user_library")
                     ? context.split("_")[1] + "_library"
                     : "current_user";
-                this.showArtistAlbums(artist.name, username);
+                this.showArtistAlbums(artist.id, artist.name, username);
                 // Update URL for artist
                 URLManager.setURL({ artist: artist.name });
             });
@@ -637,32 +615,11 @@ class ContentManager {
     }
 
     // Show albums for a specific artist
-    async showArtistAlbums(artistName, username = "current_user") {
+    async showArtistAlbums(artistId, artistName, username) {
         try {
-            const response = await this.api.getSongs(
-                { uploadedBy: username, artist: artistName },
-                1,
-                1000
-            );
-            const songs = response.data?.items || response.songs || [];
-
-            // Group songs by album
-            const albumMap = new Map();
-            songs.forEach((song) => {
-                const albumName = song.album || "Unknown Album";
-                if (!albumMap.has(albumName)) {
-                    albumMap.set(albumName, {
-                        title: albumName,
-                        artist: artistName,
-                        year: song.year,
-                        artwork: song.cover_art_url,
-                        songs: [],
-                    });
-                }
-                albumMap.get(albumName).songs.push(song);
-            });
-
-            const albums = Array.from(albumMap.values());
+            const response = await this.api.getAlbumsByArtist(artistId, 1, 100);
+            console.log("Artist Albums Response:", response);
+            const albums = response.data?.items || response.albums || [];
 
             // Show albums section
             this.showAlbumsForArtist(artistName, albums, username);
@@ -674,6 +631,7 @@ class ContentManager {
 
     // Show albums section for an artist
     showAlbumsForArtist(artistName, albums, username) {
+
         const sectionId = "artistAlbumsSection";
 
         // Show artist albums section
@@ -701,9 +659,11 @@ class ContentManager {
         }
 
         section.style.display = "block";
-        section.querySelector(
-            ".section-title"
-        ).textContent = `${artistName} - Albums`;
+        const titleText =
+            username === "shared"
+                ? `${artistName} - Albums`
+                : `${artistName} - Albums`;
+        section.querySelector(".section-title").textContent = titleText;
 
         // Setup back button - only show if accessed from library context
         const backButton = document.getElementById("backToArtists");
@@ -734,15 +694,15 @@ class ContentManager {
         albums.forEach((album) => {
             const card = document.createElement("div");
             card.className = "card";
-            card.dataset.albumTitle = album.title;
-            card.dataset.artistName = album.artist;
+            card.dataset.itemId = album.id; // Real database ID
+            card.dataset.itemType = "album";
+            card.dataset.itemTitle = album.title;
+            card.dataset.itemArtist = album.artist;
             card.dataset.albumYear = album.year || "Unknown Year";
-            card.dataset.songCount = album.songs.length;
-            card.dataset.songId = `album_${album.title}_${album.artist}`;
-            card.dataset.type = "album";
+            card.dataset.songCount = album.song_count;
 
-            const artworkStyle = album.artwork
-                ? `background: url(${album.artwork}) center/cover no-repeat`
+            const artworkStyle = album.cover_art_url
+                ? `background: url(${album.cover_art_url}) center/cover no-repeat`
                 : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
 
             card.innerHTML = `
@@ -753,7 +713,7 @@ class ContentManager {
                     )}</div>
                     <div class="card-subtitle">${
                         album.year || "Unknown Year"
-                    } • ${album.songs.length} songs</div>
+                    } • ${album.song_count} songs</div>
                 </div>
                 <button class="card-play">
                     <img src="client/icons/play.svg" alt="Play" width="24" height="24">
@@ -1145,6 +1105,14 @@ class ContentManager {
         navItems.forEach((item) => item.classList.remove("active"));
     }
 
+    // Hide all sections
+    hideAllSections() {
+        const sections = document.querySelectorAll("#content .section");
+        sections.forEach((section) => {
+            section.style.display = "none";
+        });
+    }
+
     // Centralized section management
     showSection(sectionId, homeSections = []) {
         const sections = document.querySelectorAll("#content .section");
@@ -1155,6 +1123,13 @@ class ContentManager {
                 section.style.display = "none";
             }
         });
+        
+        // Hide all sections on initial load to prevent flicker
+        if (!sectionId && homeSections.length === 0) {
+            sections.forEach((section) => {
+                section.style.display = "none";
+            });
+        }
 
         // Clear URL when showing home sections
         if (homeSections.length > 0) {

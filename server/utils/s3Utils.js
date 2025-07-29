@@ -20,7 +20,18 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 // Helper to extract S3 key from URL
 function extractS3Key(url) {
     if (!url) return null;
-    return url.split('/').slice(-2).join('/');
+    
+    // Handle full S3 URLs like https://bucket.s3.region.amazonaws.com/path/to/file
+    const urlParts = url.split('/');
+    const bucketIndex = urlParts.findIndex(part => part.includes('.s3.') || part.includes('s3.'));
+    
+    if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+        // Return everything after the bucket domain
+        return urlParts.slice(bucketIndex + 1).join('/');
+    }
+    
+    // Fallback for relative paths or other formats
+    return urlParts.slice(-2).join('/');
 }
 
 // Generate secure URL with caching

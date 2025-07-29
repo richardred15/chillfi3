@@ -276,28 +276,41 @@ export default class Visualizer {
         for (let i = 0; i < maxBin; i++) {
             const amplitude = this.smoothedDataArray[i] / 255.0;
             const x = i * sliceWidth;
-            const y = centerY - (amplitude - 0.5) * height * 0.4;
-            points.push({ x, y });
+            const yUp = centerY - amplitude * height * 0.4; // Above center
+            const yDown = centerY + amplitude * height * 0.4; // Below center (mirrored)
+            points.push({ x, yUp, yDown });
         }
 
-        // Draw smooth curves between points
+        // Draw smooth curves between points (upper half)
         if (points.length > 0) {
-            this.ctx.moveTo(points[0].x, points[0].y);
+            this.ctx.moveTo(points[0].x, points[0].yUp);
 
             for (let i = 1; i < points.length - 1; i++) {
-                const cp1x = (points[i].x + points[i - 1].x) / 2;
-                const cp1y = (points[i].y + points[i - 1].y) / 2;
                 const cp2x = (points[i].x + points[i + 1].x) / 2;
-                const cp2y = (points[i].y + points[i + 1].y) / 2;
-
-                this.ctx.quadraticCurveTo(points[i].x, points[i].y, cp2x, cp2y);
+                const cp2y = (points[i].yUp + points[i + 1].yUp) / 2;
+                this.ctx.quadraticCurveTo(points[i].x, points[i].yUp, cp2x, cp2y);
             }
 
             if (points.length > 1) {
-                this.ctx.lineTo(
-                    points[points.length - 1].x,
-                    points[points.length - 1].y
-                );
+                this.ctx.lineTo(points[points.length - 1].x, points[points.length - 1].yUp);
+            }
+        }
+        
+        this.ctx.stroke();
+        
+        // Draw mirrored lower half
+        this.ctx.beginPath();
+        if (points.length > 0) {
+            this.ctx.moveTo(points[0].x, points[0].yDown);
+
+            for (let i = 1; i < points.length - 1; i++) {
+                const cp2x = (points[i].x + points[i + 1].x) / 2;
+                const cp2y = (points[i].yDown + points[i + 1].yDown) / 2;
+                this.ctx.quadraticCurveTo(points[i].x, points[i].yDown, cp2x, cp2y);
+            }
+
+            if (points.length > 1) {
+                this.ctx.lineTo(points[points.length - 1].x, points[points.length - 1].yDown);
             }
         }
 
@@ -558,29 +571,46 @@ export default class Visualizer {
             for (let i = 0; i < maxBin; i++) {
                 const amplitude = trail.data[i] / 255.0;
                 const x = i * sliceWidth;
-                const y = centerY - (amplitude - 0.5) * height * 0.4;
-                points.push({ x, y });
+                const yUp = centerY - amplitude * height * 0.4;
+                const yDown = centerY + amplitude * height * 0.4;
+                points.push({ x, yUp, yDown });
             }
 
+            // Draw upper half
             if (points.length > 0) {
-                this.ctx.moveTo(points[0].x, points[0].y);
+                this.ctx.moveTo(points[0].x, points[0].yUp);
 
                 for (let i = 1; i < points.length - 1; i++) {
                     const cp2x = (points[i].x + points[i + 1].x) / 2;
-                    const cp2y = (points[i].y + points[i + 1].y) / 2;
-                    this.ctx.quadraticCurveTo(
-                        points[i].x,
-                        points[i].y,
-                        cp2x,
-                        cp2y
-                    );
+                    const cp2y = (points[i].yUp + points[i + 1].yUp) / 2;
+                    this.ctx.quadraticCurveTo(points[i].x, points[i].yUp, cp2x, cp2y);
                 }
 
                 if (points.length > 1) {
-                    this.ctx.lineTo(
-                        points[points.length - 1].x,
-                        points[points.length - 1].y
-                    );
+                    this.ctx.lineTo(points[points.length - 1].x, points[points.length - 1].yUp);
+                }
+            }
+            
+            this.ctx.stroke();
+            
+            // Draw mirrored lower half
+            this.ctx.beginPath();
+            this.ctx.strokeStyle = gradient;
+            this.ctx.lineWidth = 2;
+            this.ctx.lineCap = "round";
+            this.ctx.lineJoin = "round";
+            
+            if (points.length > 0) {
+                this.ctx.moveTo(points[0].x, points[0].yDown);
+
+                for (let i = 1; i < points.length - 1; i++) {
+                    const cp2x = (points[i].x + points[i + 1].x) / 2;
+                    const cp2y = (points[i].yDown + points[i + 1].yDown) / 2;
+                    this.ctx.quadraticCurveTo(points[i].x, points[i].yDown, cp2x, cp2y);
+                }
+
+                if (points.length > 1) {
+                    this.ctx.lineTo(points[points.length - 1].x, points[points.length - 1].yDown);
                 }
             }
 
@@ -720,6 +750,8 @@ export default class Visualizer {
         this.ctx.fillText(`FPS: ${this.fps}`, 20, 30);
         this.ctx.restore();
     }
+
+
 
     detectPerformanceMode() {
         // Detect device performance based on various factors

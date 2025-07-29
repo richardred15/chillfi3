@@ -57,7 +57,8 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
     const songs = await database.query(
         `
         SELECT s.id, s.title, s.duration, s.genre, s.track_number, s.file_path,
-               a.name as artist, al.title as album, al.release_year as year, al.cover_art_url,
+               a.name as artist, al.title as album, al.release_year as year, 
+               COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url,
                u.username as uploaded_by_username,
                COUNT(sl.id) as listen_count
         FROM songs s
@@ -107,7 +108,9 @@ async function getSongById(songId) {
     const songs = await database.query(
         `
         SELECT s.*, a.name as artist, al.title as album, al.release_year as year, 
-               al.cover_art_url as album_artwork, u.username as uploaded_by_username,
+               al.cover_art_url as album_artwork, 
+               COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url,
+               u.username as uploaded_by_username,
                COUNT(sl.id) as listen_count
         FROM songs s
         LEFT JOIN artists a ON s.artist_id = a.id
@@ -318,7 +321,8 @@ async function getListenStats(songId) {
 async function getRecentlyPlayed(userId, limit = 10) {
     return await database.query(
         `
-        SELECT DISTINCT s.*, a.name as artist, al.title as album, al.cover_art_url
+        SELECT DISTINCT s.*, a.name as artist, al.title as album, 
+               COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url
         FROM song_listens sl
         JOIN songs s ON sl.song_id = s.id
         LEFT JOIN artists a ON s.artist_id = a.id

@@ -104,8 +104,15 @@ class API {
 
             this.socket.emit(event, data);
 
-            this.socket.once(event, (response) => {
+            const responseHandler = (response) => {
+                // If request has requestId, only accept matching responses
+                if (data.requestId && response.requestId !== data.requestId) {
+                    return; // Ignore responses that don't match our request ID
+                }
+                
+                this.socket.off(event, responseHandler);
                 clearTimeout(timeout);
+                
                 if (response === undefined || response === null) {
                     reject(new Error("No response from server"));
                 } else if (response.success === false) {
@@ -117,7 +124,9 @@ class API {
                 } else {
                     resolve(response);
                 }
-            });
+            };
+
+            this.socket.on(event, responseHandler);
         });
     }
 
@@ -321,7 +330,7 @@ class API {
                 return {
                     url: cachedUrl,
                     metadata: { id: songId }, // Minimal metadata, full metadata should be available client-side
-                    cached: true
+                    cached: true,
                 };
             }
 
@@ -368,37 +377,40 @@ class API {
     }
 
     async getRecentlyPlayed(limit = 10, offset = 0) {
-        const result = await this.emit("song:recentlyPlayed", { limit, offset });
-        
+        const result = await this.emit("song:recentlyPlayed", {
+            limit,
+            offset,
+        });
+
         // Cache pre-generated URLs from recently played songs
         if (result.success && result.songs) {
             this.cacheSongUrls(result.songs);
         }
-        
+
         return result;
     }
 
     async searchSongs(query, page = 1, limit = 20) {
         const result = await this.emit("song:search", { query, page, limit });
-        
+
         // Cache pre-generated URLs from search results
         if (result.success && result.songs) {
             this.cacheSongUrls(result.songs);
         }
-        
+
         return result;
     }
 
     async getAlbums(page = 1, limit = 20) {
         try {
             const result = await this.emit("albums:list", { page, limit });
-            
+
             // Cache album artwork URLs (albums don't have play URLs)
             if (result.success && result.data?.items) {
                 // Albums don't need URL caching since they don't have play_url
                 // but we could cache album artwork if needed
             }
-            
+
             return result;
         } catch (error) {
             // Return cached albums if offline
@@ -410,6 +422,27 @@ class API {
             }
             throw error;
         }
+    }
+
+    // Get artists
+    async getArtists(page = 1, limit = 24) {
+        return this.emit("artist:list", { page, limit });
+    }
+
+    // Get artist by ID
+    async getArtist(artistId) {
+        return this.emit("artist:get", { artistId });
+    }
+
+    // Get albums by artist
+    async getAlbumsByArtist(artistId, page = 1, limit = 24) {
+        const requestId = `artist_${artistId}_${Date.now()}`;
+        return this.emit('albums:list', { artistId, page, limit, requestId });
+    }
+
+    // Get album by ID
+    async getAlbum(albumId) {
+        return this.emit("albums:get", { albumId });
     }
 
     // Playlist methods
@@ -457,12 +490,12 @@ class API {
             songPage,
             songLimit,
         });
-        
+
         // Cache pre-generated URLs from playlist songs
         if (result.success && result.songs) {
             this.cacheSongUrls(result.songs);
         }
-        
+
         return result;
     }
 
@@ -525,12 +558,12 @@ class API {
     // Cache song URLs from API responses
     cacheSongUrls(songs) {
         if (!Array.isArray(songs)) songs = [songs];
-        
-        songs.forEach(song => {
+
+        songs.forEach((song) => {
             if (song.id && song.play_url) {
                 this.urlCache.set(song.id, {
                     url: song.play_url,
-                    expires: Date.now() + (45 * 60 * 1000) // 45 minutes
+                    expires: Date.now() + 45 * 60 * 1000, // 45 minutes
                 });
             }
         });

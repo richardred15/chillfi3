@@ -426,7 +426,7 @@ export default class Player {
                 this.audioContext = new (window.AudioContext ||
                     window.webkitAudioContext)();
                 this.analyser = this.audioContext.createAnalyser();
-                this.analyser.fftSize = 256;
+                this.analyser.fftSize = 512; // Double the bins: 256 total, 128 displayed
 
                 this.source = this.audioContext.createMediaElementSource(
                     this.audio

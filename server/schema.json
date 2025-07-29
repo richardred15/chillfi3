@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "database": "musiclib",
   "tables": {
     "users": {
@@ -257,6 +257,10 @@
         "play_count": {
           "type": "INT",
           "default": 0
+        },
+        "cover_art_url": {
+          "type": "VARCHAR(500)",
+          "nullable": true
         }
       },
       "foreignKeys": [

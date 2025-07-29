@@ -18,6 +18,7 @@ const rateLimiter = require('./middleware/rateLimiter');
 const uploadService = require('./services/uploadService');
 const songService = require('./services/songService');
 const { generateSecureUrl } = uploadService;
+const { extractS3Key, secureImageUrl } = require('./utils/s3Utils');
 
 const s3Client = new S3Client({
     region: config.aws.region,
@@ -30,18 +31,6 @@ const BUCKET_NAME = config.aws.s3Bucket;
 
 // Get upload sessions from uploadService
 const { imageUploadSessions } = uploadService;
-
-// Helper to extract S3 key from URL
-function extractS3Key(url) {
-    if (!url) return null;
-    return url.split('/').slice(-2).join('/');
-}
-
-// Helper to secure image URLs
-async function secureImageUrl(url) {
-    const key = extractS3Key(url);
-    return key ? await generateSecureUrl(key, 3600) : url; // 1 hour for images
-}
 
 // Handle socket events
 function handleSocket(socket, _io) {
@@ -604,7 +593,8 @@ function handleSocket(socket, _io) {
             // Search songs with pagination
             const songs = await database.query(
                 `
-                SELECT s.*, a.name as artist, al.title as album, al.cover_art_url
+                SELECT s.*, a.name as artist, al.title as album, 
+                       COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url
                 FROM songs s
                 LEFT JOIN artists a ON s.artist_id = a.id
                 LEFT JOIN albums al ON s.album_id = al.id
@@ -704,7 +694,8 @@ function handleSocket(socket, _io) {
             // Get paginated songs
             const songs = await database.query(
                 `
-                SELECT DISTINCT s.*, a.name as artist, al.title as album, al.cover_art_url
+                SELECT DISTINCT s.*, a.name as artist, al.title as album, 
+                       COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url
                 FROM song_listens sl
                 JOIN songs s ON sl.song_id = s.id
                 LEFT JOIN artists a ON s.artist_id = a.id

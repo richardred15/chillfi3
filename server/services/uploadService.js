@@ -19,6 +19,7 @@ const BUCKET_NAME = config.aws.s3Bucket;
 
 // Image upload sessions storage with size limit
 const imageUploadSessions = new Map();
+const activeUploads = new Map(); // Track active HTTP uploads
 const MAX_UPLOAD_SESSIONS = 100;
 
 // URL cache for pre-signed URLs
@@ -119,33 +120,38 @@ async function createSongFromMetadata(metadata, fileUrl, fileHash, userId) {
             userId,
             metadata.year
         );
+    }
 
-        // Handle album artwork
-        if (metadata.artwork) {
+    // Handle song artwork (per-song now)
+    let songCoverArtUrl = null;
+    if (metadata.artwork) {
+        songCoverArtUrl = await uploadArtwork(
+            metadata.artwork,
+            `${fileHash}_song`
+        );
+        
+        // Also set album artwork if album doesn't have one
+        if (albumId) {
             const albums = await database.query(
                 'SELECT cover_art_url FROM albums WHERE id = ?',
                 [albumId]
             );
-
+            
             if (albums.length > 0 && !albums[0].cover_art_url) {
-                const coverArtUrl = await uploadArtwork(
-                    metadata.artwork,
-                    `${fileHash}_album`
-                );
                 await database.query(
                     'UPDATE albums SET cover_art_url = ? WHERE id = ?',
-                    [coverArtUrl, albumId]
+                    [songCoverArtUrl, albumId]
                 );
             }
         }
     }
 
-    // Insert song
+    // Insert song with cover art
     const songResult = await database.query(
         `
         INSERT INTO songs (title, artist_id, album_id, genre, track_number, duration, 
-                         file_path, uploaded_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         file_path, cover_art_url, uploaded_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
         [
             metadata.title || 'Unknown Title',
@@ -155,6 +161,7 @@ async function createSongFromMetadata(metadata, fileUrl, fileHash, userId) {
             metadata.trackNumber || null,
             metadata.duration || null,
             fileUrl,
+            songCoverArtUrl,
             userId,
         ]
     );
@@ -164,7 +171,9 @@ async function createSongFromMetadata(metadata, fileUrl, fileHash, userId) {
 
 async function uploadArtwork(artworkData, filename) {
     const artworkBuffer = Buffer.from(artworkData, 'base64');
-    const key = `album_art/${filename}.jpg`;
+    const key = filename.includes('_song') ? 
+        `song_art/${filename}.jpg` : 
+        `album_art/${filename}.jpg`;
 
     const uploadCommand = new PutObjectCommand({
         Bucket: BUCKET_NAME,
@@ -291,10 +300,34 @@ async function processFile(file, metadata, userId) {
     }
 }
 
+// Upload tracking functions
+function trackUpload(uploadId, session) {
+    activeUploads.set(uploadId, session);
+}
+
+function updateUploadProgress(uploadId, progress) {
+    const session = activeUploads.get(uploadId);
+    if (session) {
+        Object.assign(session, progress);
+    }
+}
+
+function completeUpload(uploadId) {
+    activeUploads.delete(uploadId);
+}
+
+function getActiveUploads() {
+    return activeUploads;
+}
+
 module.exports = {
     processImageChunk,
     processFile,
     imageUploadSessions,
     generateSecureUrl,
     cleanup,
+    trackUpload,
+    updateUploadProgress,
+    completeUpload,
+    getActiveUploads,
 };

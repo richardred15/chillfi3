@@ -59,6 +59,8 @@ const checkRateLimit = (req, res, next) => {
 
 // Upload endpoint
 router.post('/songs', authenticate, checkRateLimit, upload.array('files'), async (req, res) => {
+    const uploadId = `upload_${Date.now()}_${req.user.id}`;
+    
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
@@ -67,9 +69,24 @@ router.post('/songs', authenticate, checkRateLimit, upload.array('files'), async
         const metadata = JSON.parse(req.body.metadata || '[]');
         const results = [];
         
+        // Track upload session
+        uploadService.trackUpload(uploadId, {
+            userId: req.user.id,
+            username: req.user.username,
+            totalFiles: req.files.length,
+            processedFiles: 0,
+            startTime: Date.now()
+        });
+        
         for (let i = 0; i < req.files.length; i++) {
             const file = req.files[i];
             const fileMetadata = metadata[i] || {};
+            
+            // Update progress
+            uploadService.updateUploadProgress(uploadId, {
+                currentFile: file.originalname,
+                processedFiles: i
+            });
             
             try {
                 const songId = await uploadService.processFile(file, fileMetadata, req.user.id);
@@ -87,6 +104,9 @@ router.post('/songs', authenticate, checkRateLimit, upload.array('files'), async
             }
         }
         
+        // Complete upload session
+        uploadService.completeUpload(uploadId);
+        
         res.json({ 
             success: true,
             results,
@@ -96,6 +116,7 @@ router.post('/songs', authenticate, checkRateLimit, upload.array('files'), async
         
     } catch (error) {
         console.error('Upload error:', error);
+        uploadService.completeUpload(uploadId);
         res.status(500).json({ error: 'Upload failed' });
     }
 });

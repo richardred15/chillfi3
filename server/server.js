@@ -20,6 +20,8 @@ const songs = require('./songs');
 const users = require('./users');
 const playlists = require('./playlists');
 const player = require('./player');
+const artists = require('./artists');
+const albums = require('./albums');
 const versionManager = require('./version');
 
 const app = express();
@@ -392,6 +394,8 @@ io.on('connection', (socket) => {
         song: () => songs.handleSocket(socket, io),
         playlist: () => playlists.handleSocket(socket, io),
         player: () => player.handleSocket(socket, io),
+        artist: () => artists.handleSocket(socket, io),
+        albums: () => albums.handleSocket(socket, io),
         version: () => versionManager.handleSocket(socket),
     };
 
@@ -836,7 +840,16 @@ function startCLI() {
         console.log(`Artists: ${artistCount.count}`);
         console.log(`Playlists: ${playlistCount.count}`);
         console.log(`Total Listens: ${listenCount.count}`);
-        console.log(`Active Upload Sessions: ${uploadSessions ? uploadSessions.size : 0}`);
+        
+        let activeUploads;
+        try {
+            const uploadService = require('./services/uploadService');
+            activeUploads = uploadService.getActiveUploads();
+        } catch (error) {
+            activeUploads = new Map();
+        }
+        
+        console.log(`Active Song Uploads: ${activeUploads ? activeUploads.size : 0}`);
         console.log(`Active Image Uploads: ${imageUploadSessions ? imageUploadSessions.size : 0}`);
 
         // Memory usage
@@ -849,8 +862,33 @@ function startCLI() {
     }
 
     function showUploads() {
-        console.log('\n=== Active Upload Sessions ===');
-        console.log('No chunked upload sessions (using HTTP uploads)');
+        console.log('\n=== Active Song Uploads ===');
+        
+        let activeUploads;
+        try {
+            const uploadService = require('./services/uploadService');
+            activeUploads = uploadService.getActiveUploads();
+        } catch (error) {
+            activeUploads = new Map();
+        }
+        
+        if (!activeUploads || activeUploads.size === 0) {
+            console.log('No active song uploads');
+        } else {
+            console.log('ID | User | Files | Progress | Current File');
+            console.log('---|------|-------|----------|-------------');
+
+            for (const [uploadId, session] of activeUploads.entries()) {
+                const shortId = uploadId.substring(0, 8);
+                const progress = `${session.processedFiles}/${session.totalFiles}`;
+                const currentFile = session.currentFile || 'Processing...';
+                const elapsed = Math.round((Date.now() - session.startTime) / 1000);
+
+                console.log(
+                    `${shortId} | ${session.username.padEnd(8)} | ${session.totalFiles.toString().padEnd(5)} | ${progress.padEnd(8)} | ${currentFile} (${elapsed}s)`
+                );
+            }
+        }
 
         console.log('\n=== Active Image Uploads ===');
 

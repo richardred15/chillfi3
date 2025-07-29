@@ -150,25 +150,18 @@ export default class ContextMenu {
     }
 
     getSongDataFromElement(element) {
-        const songId = element.dataset.songId;
-        const type = element.dataset.type;
+        const itemId = element.dataset.itemId || element.dataset.songId; // Support both new and old formats
+        const itemType = element.dataset.itemType || element.dataset.type;
 
-        if (songId) {
-            let title, artist;
-            
-            if (type === 'album') {
-                title = element.dataset.albumTitle;
-                artist = element.dataset.artistName;
-            } else {
-                title = element.dataset.songTitle;
-                artist = element.dataset.songArtist;
-            }
+        if (itemId) {
+            const title = element.dataset.itemTitle || element.dataset.songTitle || element.dataset.albumTitle;
+            const artist = element.dataset.itemArtist || element.dataset.songArtist || element.dataset.artistName;
 
             return {
-                id: songId,
+                id: itemId,
                 title: title,
                 artist: artist,
-                type: type,
+                type: itemType,
             };
         }
         return null;
@@ -347,9 +340,10 @@ export default class ContextMenu {
         console.log("showShareModal called", this.currentSong);
         const modal = document.getElementById("shareModal");
         console.log("Share modal element:", modal);
-        const isAlbum =
-            this.currentElement && this.currentElement.dataset.type === "album";
-        console.log("Is album:", isAlbum);
+        const itemType = this.currentElement && (this.currentElement.dataset.itemType || this.currentElement.dataset.type);
+        const isAlbum = itemType === "album";
+        const isArtist = itemType === "artist";
+        console.log("Item type:", itemType, "Is album:", isAlbum, "Is artist:", isArtist);
 
         // Populate modal content
         const artwork = modal.querySelector(".share-item-artwork");
@@ -386,14 +380,36 @@ export default class ContextMenu {
             }/?album=${encodeURIComponent(
                 albumTitle
             )}&artist=${encodeURIComponent(albumArtist)}`;
-        } else if (this.currentSong.type === "artist") {
-            // Handle artist sharing
-            artwork.style.backgroundImage = "";
-            title.textContent = this.currentSong.title;
-            subtitle.textContent = "Artist";
-            urlInput.value = `${
-                window.location.origin
-            }/?artist=${encodeURIComponent(this.currentSong.title)}`;
+        } else if (isArtist) {
+            // Handle artist sharing - get artist data from API
+            try {
+                const artistData = await this.api.getArtist(this.currentSong.id);
+                const artist = artistData.data?.artist || artistData.artist;
+                
+                const artworkUrl = artist?.cover_art_url || "";
+                artwork.style.backgroundImage = artworkUrl
+                    ? `url(${artworkUrl})`
+                    : "";
+                if (!artworkUrl) {
+                    artwork.style.background = "linear-gradient(45deg, #8C67EF, #4F9EFF)";
+                }
+                
+                title.textContent = artist ? artist.name : this.currentSong.title;
+                subtitle.textContent = "Artist";
+                urlInput.value = `${
+                    window.location.origin
+                }/?artist=${encodeURIComponent(artist ? artist.name : this.currentSong.title)}`;
+            } catch (error) {
+                console.error('Failed to get artist data:', error);
+                // Fallback to basic data
+                artwork.style.backgroundImage = "";
+                artwork.style.background = "linear-gradient(45deg, #8C67EF, #4F9EFF)";
+                title.textContent = this.currentSong.title;
+                subtitle.textContent = "Artist";
+                urlInput.value = `${
+                    window.location.origin
+                }/?artist=${encodeURIComponent(this.currentSong.title)}`;
+            }
         } else {
             console.log("Getting song data for ID:", this.currentSong.id);
             // Get full song data from API for songs

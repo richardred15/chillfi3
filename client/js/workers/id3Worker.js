@@ -77,8 +77,14 @@ function parseID3Tags(buffer) {
                 }
                 // Parse picture frames
                 else if (frameId === 'APIC' || frameId === 'PIC') {
-                    const picture = parsePictureFrame(frameData, frameId === 'PIC');
-                    if (picture) tags.picture = picture;
+                    try {
+                        const picture = parsePictureFrame(frameData, frameId === 'PIC');
+                        if (picture && picture.data && picture.data.length > 100) { // Ensure meaningful image data
+                            tags.picture = picture;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse picture frame:', e);
+                    }
                 }
             } catch (e) {
                 console.warn('Error parsing frame', frameId, e);
@@ -132,6 +138,8 @@ function parseTextFrame(frameData) {
 function parsePictureFrame(frameData, isV22 = false) {
     if (frameData.length < 10) return null;
     
+    try {
+    
     let offset = 0;
     const encoding = frameData[offset++];
     
@@ -159,6 +167,28 @@ function parsePictureFrame(frameData, isV22 = false) {
         offset = descEnd + 1;
     }
     
+    // Handle missing or incomplete MIME types by detecting from image headers
+    if (!mimeType || mimeType === 'image/' || mimeType === '') {
+        const imageStart = frameData.slice(offset);
+        if (imageStart.length >= 4) {
+            if (imageStart[0] === 0xFF && imageStart[1] === 0xD8) {
+                mimeType = 'image/jpeg';
+            } else if (imageStart[0] === 0x89 && imageStart[1] === 0x50 && imageStart[2] === 0x4E && imageStart[3] === 0x47) {
+                mimeType = 'image/png';
+            } else if (imageStart[0] === 0x47 && imageStart[1] === 0x49 && imageStart[2] === 0x46) {
+                mimeType = 'image/gif';
+            } else if (imageStart[0] === 0x42 && imageStart[1] === 0x4D) {
+                mimeType = 'image/bmp';
+            } else if (imageStart.length >= 12 && imageStart[0] === 0x52 && imageStart[1] === 0x49 && imageStart[2] === 0x46 && imageStart[3] === 0x46 && imageStart[8] === 0x57 && imageStart[9] === 0x45 && imageStart[10] === 0x42 && imageStart[11] === 0x50) {
+                mimeType = 'image/webp';
+            } else {
+                mimeType = 'image/jpeg'; // Default fallback
+            }
+        } else {
+            mimeType = 'image/jpeg'; // Default fallback
+        }
+    }
+    
     // Extract image data
     const imageData = frameData.slice(offset);
     
@@ -170,6 +200,11 @@ function parsePictureFrame(frameData, isV22 = false) {
     }
     
     return null;
+    
+    } catch (error) {
+        console.warn('Error parsing picture frame:', error);
+        return null;
+    }
 }
 
 function findNullByte(data, startIndex = 0) {

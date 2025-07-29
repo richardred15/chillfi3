@@ -67,6 +67,12 @@ class ShareManager {
         if (urlParams.has('view')) {
             const view = urlParams.get('view');
             this.loadViewFromURL(view);
+            return;
+        }
+        
+        // No URL parameters found, show home sections
+        if (window.contentManager) {
+            window.contentManager.showHomeSections();
         }
     }
 
@@ -158,8 +164,22 @@ class ShareManager {
     async loadArtistFromURL(artistName) {
         try {
             if (window.contentManager) {
-                // Use existing artist albums functionality
-                await window.contentManager.showArtistAlbums(artistName, 'current_user');
+                // First find the artist by name to get their ID
+                const artistsResponse = await this.api.getArtists(1, 100);
+                const artists = artistsResponse.data?.items || artistsResponse.artists || [];
+                const artist = artists.find(a => a.name === artistName);
+                
+                if (artist) {
+                    await window.contentManager.showArtistAlbums(artist.id, artist.name, 'shared');
+                } else {
+                    // Fallback: try to find by partial match
+                    const partialMatch = artists.find(a => a.name.toLowerCase().includes(artistName.toLowerCase()));
+                    if (partialMatch) {
+                        await window.contentManager.showArtistAlbums(partialMatch.id, partialMatch.name, 'shared');
+                    } else {
+                        this.toast?.show(`Artist "${artistName}" not found`);
+                    }
+                }
             }
         } catch (error) {
             console.error('Failed to load artist from URL:', error);

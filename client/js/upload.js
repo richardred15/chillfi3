@@ -1,7 +1,7 @@
 /**
  * Upload Manager - Handles file uploads to server
  */
-import { parseID3Tags, findNullByte } from './utils/id3Parser.js';
+
 
 class UploadManager {
     constructor(api, toast) {
@@ -128,24 +128,41 @@ class UploadManager {
         // Set processing flag to prevent button from enabling prematurely
         this.isProcessingFiles = true;
         
-        const audioFiles = Array.from(files).filter(file => {
+        // Separate audio files and images
+        const audioFiles = [];
+        const imageFiles = new Map(); // Map folder path to image files
+        
+        Array.from(files).forEach(file => {
             console.log('File:', file.name, 'Type:', file.type, 'Size:', file.size);
             
-            // Check by MIME type first
-            if (file.type && file.type.startsWith('audio/')) {
-                return true;
-            }
+            // Check for audio files
+            const isAudio = (file.type && file.type.startsWith('audio/')) || 
+                           ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma'].some(ext => 
+                               file.name.toLowerCase().endsWith(ext));
             
-            // Fallback to file extension for folders/drag-drop
-            const audioExtensions = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma'];
-            const isAudio = audioExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+            // Check for album art images
+            const isAlbumArt = (file.type && file.type.startsWith('image/')) || 
+                              ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].some(ext => 
+                                  file.name.toLowerCase().endsWith(ext));
             
             if (isAudio) {
-                console.log('Detected audio file by extension:', file.name);
+                console.log('Detected audio file:', file.name);
+                audioFiles.push(file);
+            } else if (isAlbumArt) {
+                // Get folder path from webkitRelativePath or use root
+                const folderPath = file.webkitRelativePath ? 
+                    file.webkitRelativePath.split('/').slice(0, -1).join('/') : '';
+                
+                if (!imageFiles.has(folderPath)) {
+                    imageFiles.set(folderPath, []);
+                }
+                imageFiles.get(folderPath).push(file);
+                console.log('Found album art:', file.name, 'in folder:', folderPath);
             }
-            
-            return isAudio;
         });
+        
+        // Store image files for later use
+        this.folderImages = imageFiles;
         
         console.log('Found', audioFiles.length, 'audio files');
         
@@ -295,17 +312,60 @@ class UploadManager {
             const titleElement = fileItem.querySelector('.file-item-title');
             if (titleElement) titleElement.textContent = tags.title || fileItem._fileObject.name.replace(/\.[^/.]+$/, '');
             
-            // Handle album art
+            // Handle album art - try embedded first, then folder images
+            let artworkSet = false;
             if (tags.picture) {
                 const artworkPreview = fileItem.querySelector('.file-item-artwork-preview');
                 const blob = new Blob([tags.picture.data], { type: tags.picture.format });
                 const imageUrl = URL.createObjectURL(blob);
                 artworkPreview.style.backgroundImage = `url(${imageUrl})`;
+                artworkSet = true;
+            }
+            
+            // If no embedded art, look for folder-based album art
+            if (!artworkSet) {
+                this.setFolderAlbumArt(fileItem);
             }
         }
         
         // Update upload button status
         this.updateUploadButtonStatus();
+    }
+    
+    // Set folder-based album art for a file
+    setFolderAlbumArt(fileItem) {
+        if (!this.folderImages || !fileItem._fileObject) return;
+        
+        // Get folder path from the audio file
+        const audioFile = fileItem._fileObject;
+        const folderPath = audioFile.webkitRelativePath ? 
+            audioFile.webkitRelativePath.split('/').slice(0, -1).join('/') : '';
+        
+        const folderImages = this.folderImages.get(folderPath) || [];
+        
+        // Look for common album art filenames (prioritized)
+        const artPriority = ['folder.jpg', 'albumart.jpg', 'cover.jpg', 'front.jpg', 'album.jpg'];
+        let selectedImage = null;
+        
+        // First, try to find prioritized filenames
+        for (const priority of artPriority) {
+            selectedImage = folderImages.find(img => 
+                img.name.toLowerCase() === priority
+            );
+            if (selectedImage) break;
+        }
+        
+        // If no prioritized image found, use the first available image
+        if (!selectedImage && folderImages.length > 0) {
+            selectedImage = folderImages[0];
+        }
+        
+        if (selectedImage) {
+            const artworkPreview = fileItem.querySelector('.file-item-artwork-preview');
+            const imageUrl = URL.createObjectURL(selectedImage);
+            artworkPreview.style.backgroundImage = `url(${imageUrl})`;
+            console.log('Set folder album art:', selectedImage.name, 'for', audioFile.name);
+        }
     }
     
     // Update upload button status based on pending files
