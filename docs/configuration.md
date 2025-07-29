@@ -14,6 +14,12 @@ DB_USER=musiclib
 DB_PASSWORD=your_secure_password
 DB_NAME=musiclib
 
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+REDIS_DB=0
+
 # Server Configuration
 PORT=3005
 HOST=localhost
@@ -38,8 +44,11 @@ HTTPS_CA=/path/to/ca-bundle.crt
 MAX_FILE_SIZE=104857600
 CHUNK_SIZE=524288
 
-# Logging
-LOG_LEVEL=INFO
+# Logging (Winston)
+LOG_LEVEL=info
+LOG_FILE=logs/chillfi3.log
+LOG_MAX_SIZE=10m
+LOG_MAX_FILES=5
 ```
 
 ### Client Configuration (`.env.client`)
@@ -64,6 +73,15 @@ DEV_CLIENT_URL=http://localhost:3000
 | `DB_USER` | musiclib | Database username |
 | `DB_PASSWORD` | - | Database password (required) |
 | `DB_NAME` | musiclib | Database name |
+
+### Redis Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_HOST` | localhost | Redis server hostname |
+| `REDIS_PORT` | 6379 | Redis server port |
+| `REDIS_PASSWORD` | - | Redis password (optional) |
+| `REDIS_DB` | 0 | Redis database number |
 
 ### Server Settings
 
@@ -95,6 +113,15 @@ DEV_CLIENT_URL=http://localhost:3000
 |----------|---------|-------------|
 | `MAX_FILE_SIZE` | 104857600 | Max file size (100MB) |
 | `CHUNK_SIZE` | 524288 | Upload chunk size (512KB) |
+
+### Logging Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | info | Logging level (error, warn, info, debug) |
+| `LOG_FILE` | logs/chillfi3.log | Log file path |
+| `LOG_MAX_SIZE` | 10m | Maximum log file size |
+| `LOG_MAX_FILES` | 5 | Number of log files to keep |
 
 ## Docker Configuration
 

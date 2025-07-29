@@ -21,6 +21,7 @@ A modern, self-hosted private music library with real-time streaming, social sha
 - Node.js 18+
 - PHP 8.0+
 - MySQL/MariaDB
+- Redis (for caching and session management)
 - Web server (nginx/Apache)
 
 ### Installation
@@ -211,6 +212,11 @@ DB_USER=musiclib
 DB_PASSWORD=your_password
 DB_NAME=musiclib
 
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+
 # AWS S3 (optional)
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
@@ -219,6 +225,10 @@ S3_BUCKET_NAME=your_bucket
 # Server
 PORT=3005
 JWT_SECRET=your_jwt_secret
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/chillfi3.log
 ```
 
 **Client (.env.client)**
@@ -279,3 +289,5 @@ Built with modern web technologies:
 - Vanilla JavaScript (ES6 modules)
 - PHP for server-side rendering
 - MySQL for data storage
+- Redis for caching and session management
+- Winston for structured logging

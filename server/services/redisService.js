@@ -114,6 +114,19 @@ class RedisService {
     isConnected() {
         return this.connected;
     }
+
+    // Clear all cache
+    async flushAll() {
+        if (!this.connected) return false;
+        try {
+            await this.client.flushAll();
+            logger.info('Redis cache cleared');
+            return true;
+        } catch (error) {
+            logger.error('Redis flush error', { error: error.message });
+            return false;
+        }
+    }
 }
 
 // Create singleton instance

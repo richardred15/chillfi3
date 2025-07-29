@@ -15,7 +15,6 @@ const config = require('./config');
 const database = require('./database');
 const logger = require('./utils/logger');
 const redisService = require('./services/redisService');
-// const songService = require('./services/songService');
 const auth = require('./auth');
 const songs = require('./songs');
 const users = require('./users');
@@ -152,11 +151,22 @@ app.get('/api/og/song/:id', ogRateLimiter, async (req, res) => {
         }
 
         const song = songs[0];
+        
+        // Import secureImageUrl function
+        const { generateSecureUrl } = require('./services/uploadService');
+        const extractS3Key = (url) => url ? url.split('/').slice(-2).join('/') : null;
+        const secureImageUrl = async (url) => {
+            const key = extractS3Key(url);
+            return key ? await generateSecureUrl(key, 3600) : url;
+        };
+        
+        const securedImageUrl = song.cover_art_url ? await secureImageUrl(song.cover_art_url) : null;
+        
         res.json({
             title: song.title,
             artist: song.artist,
             album: song.album,
-            image: song.cover_art_url,
+            image: securedImageUrl,
         });
     } catch (error) {
         logger.error('Get song OG error', { error: error.message, songId: req.params.id });
@@ -200,10 +210,21 @@ app.get('/api/og/album', ogRateLimiter, async (req, res) => {
         }
 
         const album = albums[0];
+        
+        // Secure the image URL
+        const { generateSecureUrl } = require('./services/uploadService');
+        const extractS3Key = (url) => url ? url.split('/').slice(-2).join('/') : null;
+        const secureImageUrl = async (url) => {
+            const key = extractS3Key(url);
+            return key ? await generateSecureUrl(key, 3600) : url;
+        };
+        
+        const securedImageUrl = album.cover_art_url ? await secureImageUrl(album.cover_art_url) : null;
+        
         res.json({
             album: album.album,
             artist: album.artist,
-            image: album.cover_art_url,
+            image: securedImageUrl,
             songCount: album.song_count,
         });
     } catch (error) {
@@ -236,11 +257,22 @@ app.get('/api/og/library/:username', ogRateLimiter, async (req, res) => {
         }
 
         const library = songs[0];
+        
+        // Secure the image URL
+        const { generateSecureUrl } = require('./services/uploadService');
+        const extractS3Key = (url) => url ? url.split('/').slice(-2).join('/') : null;
+        const secureImageUrl = async (url) => {
+            const key = extractS3Key(url);
+            return key ? await generateSecureUrl(key, 3600) : url;
+        };
+        
+        const securedImageUrl = library.cover_art_url ? await secureImageUrl(library.cover_art_url) : null;
+        
         res.json({
             username: username,
             songCount: library.song_count,
             albumCount: library.album_count,
-            image: library.cover_art_url,
+            image: securedImageUrl,
         });
     } catch (error) {
         console.error('Get library OG error:', error);
@@ -272,11 +304,22 @@ app.get('/api/og/artist/:name', ogRateLimiter, async (req, res) => {
         }
 
         const artist = songs[0];
+        
+        // Secure the image URL
+        const { generateSecureUrl } = require('./services/uploadService');
+        const extractS3Key = (url) => url ? url.split('/').slice(-2).join('/') : null;
+        const secureImageUrl = async (url) => {
+            const key = extractS3Key(url);
+            return key ? await generateSecureUrl(key, 3600) : url;
+        };
+        
+        const securedImageUrl = artist.cover_art_url ? await secureImageUrl(artist.cover_art_url) : null;
+        
         res.json({
             artist: artistName,
             songCount: artist.song_count,
             albumCount: artist.album_count,
-            image: artist.cover_art_url,
+            image: securedImageUrl,
         });
     } catch (error) {
         console.error('Get artist OG error:', error);

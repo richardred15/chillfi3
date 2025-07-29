@@ -1,19 +1,33 @@
 /**
  * Playlists Module
  */
-const database = require('./database');
+const database = require("./database");
+const uploadService = require('./services/uploadService');
+const { generateSecureUrl } = uploadService;
+
+// Helper to extract S3 key from URL
+function extractS3Key(url) {
+    if (!url) return null;
+    return url.split('/').slice(-2).join('/');
+}
+
+// Helper to secure image URLs
+async function secureImageUrl(url) {
+    const key = extractS3Key(url);
+    return key ? await generateSecureUrl(key, 3600) : url; // 1 hour for images
+}
 
 // Handle socket events
 function handleSocket(socket, _io) {
     // List user playlists
-    socket.on('playlist:list', async (data) => {
+    socket.on("playlist:list", async (data) => {
         try {
             const { userId, page = 1 } = data;
 
             if (!userId) {
-                return socket.emit('playlist:list', {
+                return socket.emit("playlist:list", {
                     error: true,
-                    message: 'User ID required',
+                    message: "User ID required",
                 });
             }
 
@@ -28,7 +42,7 @@ function handleSocket(socket, _io) {
                 [userId]
             );
 
-            socket.emit('playlist:list', {
+            socket.emit("playlist:list", {
                 success: true,
                 data: {
                     playlists,
@@ -37,24 +51,23 @@ function handleSocket(socket, _io) {
                 },
             });
         } catch (error) {
-            console.error('List playlists error:', error);
-            socket.emit('playlist:list', {
+            console.error("List playlists error:", error);
+            socket.emit("playlist:list", {
                 error: true,
-                message: 'Failed to get playlists',
+                message: "Failed to get playlists",
             });
         }
     });
 
     // Get playlist details
-    socket.on('playlist:get', async (data) => {
+    socket.on("playlist:get", async (data) => {
         try {
-            console.log('Getting playlist:', data);
+            data.playlistId = parseInt(data.playlistId);
             const { playlistId } = data;
-
             if (!playlistId) {
-                return socket.emit('playlist:get', {
+                return socket.emit("playlist:get", {
                     error: true,
-                    message: 'Playlist ID required',
+                    message: "Playlist ID required",
                 });
             }
 
@@ -70,9 +83,9 @@ function handleSocket(socket, _io) {
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:get', {
+                return socket.emit("playlist:get", {
                     error: true,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -85,20 +98,22 @@ function handleSocket(socket, _io) {
                     (socket.user.id !== playlist.user_id &&
                         !socket.user.is_admin)
                 ) {
-                    return socket.emit('playlist:get', {
+                    return socket.emit("playlist:get", {
                         error: true,
-                        message: 'Unauthorized',
+                        message: "Unauthorized",
                     });
                 }
             }
 
             // Get playlist songs with pagination
             const { songPage = 1, songLimit = 50 } = data;
-            const songOffset = (songPage - 1) * songLimit;
+            const parsedSongLimit = parseInt(songLimit);
+            const parsedSongPage = parseInt(songPage);
+            const songOffset = (parsedSongPage - 1) * parsedSongLimit;
 
             const songs = await database.query(
                 `
-                SELECT s.id, s.title, s.duration, al.cover_art_url,
+                SELECT s.id, s.title, s.duration, s.file_path, al.cover_art_url,
                        a.name as artist, al.title as album,
                        ps.position, ps.added_at
                 FROM playlist_songs ps
@@ -107,102 +122,114 @@ function handleSocket(socket, _io) {
                 LEFT JOIN albums al ON s.album_id = al.id
                 WHERE ps.playlist_id = ?
                 ORDER BY ps.position ASC
-                LIMIT ? OFFSET ?
+                LIMIT ${parsedSongLimit} OFFSET ${songOffset}
             `,
-                [playlistId, parseInt(songLimit), parseInt(songOffset)]
+                [playlistId]
             );
+            // Secure album art URLs and pre-generate play URLs
+            for (const song of songs) {
+                if (song.cover_art_url) {
+                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+                // Pre-generate signed URL for faster playback
+                if (song.file_path) {
+                    const audioKey = extractS3Key(song.file_path);
+                    song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
+                }
+            }
+            
 
             // Get total song count
             const [songCountResult] = await database.query(
-                'SELECT COUNT(*) as count FROM playlist_songs WHERE playlist_id = ?',
+                "SELECT COUNT(*) as count FROM playlist_songs WHERE playlist_id = ?",
                 [playlistId]
             );
 
-            socket.emit('playlist:get', {
+            socket.emit("playlist:get", {
                 success: true,
                 playlist,
                 songs,
                 songTotal: songCountResult.count,
-                songPage,
+                songPage: parsedSongPage,
             });
         } catch (error) {
-            console.error('Get playlist error:', error);
-            socket.emit('playlist:get', {
+            console.error("Get playlist error:", error);
+            socket.emit("playlist:get", {
                 success: false,
                 error: true,
-                message: 'Failed to get playlist',
+                message: "Failed to get playlist",
             });
         }
     });
 
     // Create playlist
-    socket.on('playlist:create', async (data) => {
+    socket.on("playlist:create", async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit('playlist:create', {
+                return socket.emit("playlist:create", {
                     success: false,
-                    message: 'Authentication required',
+                    message: "Authentication required",
                 });
             }
 
             const { name, isPublic = false } = data;
 
             if (!name) {
-                return socket.emit('playlist:create', {
+                return socket.emit("playlist:create", {
                     success: false,
-                    message: 'Playlist name required',
+                    message: "Playlist name required",
                 });
             }
 
             const result = await database.query(
-                'INSERT INTO playlists (name, user_id, is_public) VALUES (?, ?, ?)',
+                "INSERT INTO playlists (name, user_id, is_public) VALUES (?, ?, ?)",
                 [name, socket.user.id, isPublic ? 1 : 0]
             );
 
-            socket.emit('playlist:create', {
+            socket.emit("playlist:create", {
                 success: true,
                 data: {
                     playlistId: result.insertId,
                 },
             });
         } catch (error) {
-            console.error('Create playlist error:', error);
-            socket.emit('playlist:create', {
+            console.error("Create playlist error:", error);
+            socket.emit("playlist:create", {
                 success: false,
-                message: 'Failed to create playlist',
+                message: "Failed to create playlist",
             });
         }
     });
 
     // Update playlist
-    socket.on('playlist:update', async (data) => {
+    socket.on("playlist:update", async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit('playlist:update', {
+                return socket.emit("playlist:update", {
                     success: false,
-                    message: 'Authentication required',
+                    message: "Authentication required",
                 });
             }
 
             const { playlistId, updates } = data;
 
             if (!playlistId) {
-                return socket.emit('playlist:update', {
+                return socket.emit("playlist:update", {
                     success: false,
-                    message: 'Playlist ID required',
+                    message: "Playlist ID required",
                 });
             }
 
             // Check ownership
             const playlists = await database.query(
-                'SELECT user_id FROM playlists WHERE id = ?',
+                "SELECT user_id FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:update', {
+                return socket.emit("playlist:update", {
                     success: false,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -210,13 +237,13 @@ function handleSocket(socket, _io) {
                 playlists[0].user_id !== socket.user.id &&
                 !socket.user.is_admin
             ) {
-                return socket.emit('playlist:update', {
+                return socket.emit("playlist:update", {
                     success: false,
-                    message: 'Unauthorized',
+                    message: "Unauthorized",
                 });
             }
 
-            const allowedFields = ['name', 'is_public'];
+            const allowedFields = ["name", "is_public"];
             const updateFields = [];
             const updateValues = [];
 
@@ -228,9 +255,9 @@ function handleSocket(socket, _io) {
             }
 
             if (updateFields.length === 0) {
-                return socket.emit('playlist:update', {
+                return socket.emit("playlist:update", {
                     success: false,
-                    message: 'No valid fields to update',
+                    message: "No valid fields to update",
                 });
             }
 
@@ -238,59 +265,59 @@ function handleSocket(socket, _io) {
 
             await database.query(
                 `UPDATE playlists SET ${updateFields.join(
-                    ', '
+                    ", "
                 )}, updated_at = NOW() WHERE id = ?`,
                 updateValues
             );
 
             // Get updated playlist
             const updatedPlaylists = await database.query(
-                'SELECT * FROM playlists WHERE id = ?',
+                "SELECT * FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
-            socket.emit('playlist:update', {
+            socket.emit("playlist:update", {
                 success: true,
                 playlist: updatedPlaylists[0],
             });
         } catch (error) {
-            console.error('Update playlist error:', error);
-            socket.emit('playlist:update', {
+            console.error("Update playlist error:", error);
+            socket.emit("playlist:update", {
                 success: false,
-                message: 'Failed to update playlist',
+                message: "Failed to update playlist",
             });
         }
     });
 
     // Delete playlist
-    socket.on('playlist:delete', async (data) => {
+    socket.on("playlist:delete", async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit('playlist:delete', {
+                return socket.emit("playlist:delete", {
                     success: false,
-                    message: 'Authentication required',
+                    message: "Authentication required",
                 });
             }
 
             const { playlistId } = data;
 
             if (!playlistId) {
-                return socket.emit('playlist:delete', {
+                return socket.emit("playlist:delete", {
                     success: false,
-                    message: 'Playlist ID required',
+                    message: "Playlist ID required",
                 });
             }
 
             // Check ownership
             const playlists = await database.query(
-                'SELECT user_id FROM playlists WHERE id = ?',
+                "SELECT user_id FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:delete', {
+                return socket.emit("playlist:delete", {
                     success: false,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -298,57 +325,57 @@ function handleSocket(socket, _io) {
                 playlists[0].user_id !== socket.user.id &&
                 !socket.user.is_admin
             ) {
-                return socket.emit('playlist:delete', {
+                return socket.emit("playlist:delete", {
                     success: false,
-                    message: 'Unauthorized',
+                    message: "Unauthorized",
                 });
             }
 
             // Delete playlist (cascade will handle playlist_songs)
-            await database.query('DELETE FROM playlists WHERE id = ?', [
+            await database.query("DELETE FROM playlists WHERE id = ?", [
                 playlistId,
             ]);
 
-            socket.emit('playlist:delete', { success: true });
+            socket.emit("playlist:delete", { success: true });
         } catch (error) {
-            console.error('Delete playlist error:', error);
-            socket.emit('playlist:delete', {
+            console.error("Delete playlist error:", error);
+            socket.emit("playlist:delete", {
                 success: false,
-                message: 'Failed to delete playlist',
+                message: "Failed to delete playlist",
             });
         }
     });
 
     // Add song to playlist
-    socket.on('playlist:addSong', async (data) => {
+    socket.on("playlist:addSong", async (data) => {
         try {
-            console.log('Adding song to playlist:', data);
+
             if (!socket.authenticated) {
-                return socket.emit('playlist:addSong', {
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Authentication required',
+                    message: "Authentication required",
                 });
             }
 
             const { playlistId, songId } = data;
 
             if (!playlistId || !songId) {
-                return socket.emit('playlist:addSong', {
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Playlist ID and Song ID required',
+                    message: "Playlist ID and Song ID required",
                 });
             }
 
             // Check playlist ownership
             const playlists = await database.query(
-                'SELECT user_id FROM playlists WHERE id = ?',
+                "SELECT user_id FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:addSong', {
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -356,103 +383,98 @@ function handleSocket(socket, _io) {
                 playlists[0].user_id !== socket.user.id &&
                 !socket.user.is_admin
             ) {
-                return socket.emit('playlist:addSong', {
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Unauthorized',
+                    message: "Unauthorized",
                 });
             }
 
             // Check if song exists
             const songs = await database.query(
-                'SELECT id FROM songs WHERE id = ?',
+                "SELECT id FROM songs WHERE id = ?",
                 [songId]
             );
 
             if (songs.length === 0) {
-                return socket.emit('playlist:addSong', {
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Song not found',
+                    message: "Song not found",
                 });
             }
 
             // Check if song is already in playlist
             const existing = await database.query(
-                'SELECT playlist_id FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
+                "SELECT playlist_id FROM playlist_songs WHERE playlist_id = ? AND song_id = ?",
                 [playlistId, songId]
             );
 
             if (existing.length > 0) {
-                console.log('Song already in playlist');
-                return socket.emit('playlist:addSong', {
+
+                return socket.emit("playlist:addSong", {
                     success: false,
-                    message: 'Song already in playlist',
+                    message: "Song already in playlist",
                 });
             }
 
             // Get next position
             const [maxPosition] = await database.query(
-                'SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM playlist_songs WHERE playlist_id = ?',
+                "SELECT COALESCE(MAX(position), 0) + 1 as next_position FROM playlist_songs WHERE playlist_id = ?",
                 [playlistId]
             );
 
             // Add song to playlist
-            console.log(
-                'Inserting into playlist_songs:',
-                playlistId,
-                songId,
-                maxPosition.next_position
-            );
+
             await database.query(
-                'INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)',
+                "INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)",
                 [playlistId, songId, maxPosition.next_position]
             );
-            console.log('Successfully added song to playlist');
+
 
             // Update playlist timestamp
             await database.query(
-                'UPDATE playlists SET updated_at = NOW() WHERE id = ?',
+                "UPDATE playlists SET updated_at = NOW() WHERE id = ?",
                 [playlistId]
             );
 
-            socket.emit('playlist:addSong', { success: true });
+            socket.emit("playlist:addSong", { success: true });
         } catch (error) {
-            console.error('Add song to playlist error:', error);
-            socket.emit('playlist:addSong', {
+            console.error("Add song to playlist error:", error);
+            socket.emit("playlist:addSong", {
                 success: false,
-                message: 'Failed to add song to playlist',
+                message: "Failed to add song to playlist",
             });
         }
     });
 
     // Remove song from playlist
-    socket.on('playlist:removeSong', async (data) => {
+    socket.on("playlist:removeSong", async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit('playlist:removeSong', {
+                return socket.emit("playlist:removeSong", {
                     success: false,
-                    message: 'Authentication required',
+                    message: "Authentication required",
                 });
             }
 
             const { playlistId, songId } = data;
 
             if (!playlistId || !songId) {
-                return socket.emit('playlist:removeSong', {
+                return socket.emit("playlist:removeSong", {
                     success: false,
-                    message: 'Playlist ID and Song ID required',
+                    message: "Playlist ID and Song ID required",
                 });
             }
 
             // Check playlist ownership
             const playlists = await database.query(
-                'SELECT user_id FROM playlists WHERE id = ?',
+                "SELECT user_id FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:removeSong', {
+                return socket.emit("playlist:removeSong", {
                     success: false,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -460,15 +482,15 @@ function handleSocket(socket, _io) {
                 playlists[0].user_id !== socket.user.id &&
                 !socket.user.is_admin
             ) {
-                return socket.emit('playlist:removeSong', {
+                return socket.emit("playlist:removeSong", {
                     success: false,
-                    message: 'Unauthorized',
+                    message: "Unauthorized",
                 });
             }
 
             // Remove song from playlist
             await database.query(
-                'DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
+                "DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?",
                 [playlistId, songId]
             );
 
@@ -489,42 +511,42 @@ function handleSocket(socket, _io) {
 
             // Update playlist timestamp
             await database.query(
-                'UPDATE playlists SET updated_at = NOW() WHERE id = ?',
+                "UPDATE playlists SET updated_at = NOW() WHERE id = ?",
                 [playlistId]
             );
 
-            socket.emit('playlist:removeSong', { success: true });
+            socket.emit("playlist:removeSong", { success: true });
         } catch (error) {
-            console.error('Remove song from playlist error:', error);
-            socket.emit('playlist:removeSong', {
+            console.error("Remove song from playlist error:", error);
+            socket.emit("playlist:removeSong", {
                 success: false,
-                message: 'Failed to remove song from playlist',
+                message: "Failed to remove song from playlist",
             });
         }
     });
 
     // Share playlist
-    socket.on('playlist:share', async (data) => {
+    socket.on("playlist:share", async (data) => {
         try {
             const { playlistId } = data;
 
             if (!playlistId) {
-                return socket.emit('playlist:share', {
+                return socket.emit("playlist:share", {
                     error: true,
-                    message: 'Playlist ID required',
+                    message: "Playlist ID required",
                 });
             }
 
             // Check if playlist exists and is public
             const playlists = await database.query(
-                'SELECT id, is_public, user_id FROM playlists WHERE id = ?',
+                "SELECT id, is_public, user_id FROM playlists WHERE id = ?",
                 [playlistId]
             );
 
             if (playlists.length === 0) {
-                return socket.emit('playlist:share', {
+                return socket.emit("playlist:share", {
                     error: true,
-                    message: 'Playlist not found',
+                    message: "Playlist not found",
                 });
             }
 
@@ -537,20 +559,20 @@ function handleSocket(socket, _io) {
                     (socket.user.id !== playlist.user_id &&
                         !socket.user.is_admin))
             ) {
-                return socket.emit('playlist:share', {
+                return socket.emit("playlist:share", {
                     error: true,
-                    message: 'Cannot share private playlist',
+                    message: "Cannot share private playlist",
                 });
             }
 
             const shareUrl = `${process.env.CLIENT_URL}/?playlist=${playlistId}`;
 
-            socket.emit('playlist:share', { url: shareUrl });
+            socket.emit("playlist:share", { url: shareUrl });
         } catch (error) {
-            console.error('Share playlist error:', error);
-            socket.emit('playlist:share', {
+            console.error("Share playlist error:", error);
+            socket.emit("playlist:share", {
                 error: true,
-                message: 'Failed to generate share URL',
+                message: "Failed to generate share URL",
             });
         }
     });

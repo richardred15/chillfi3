@@ -9,9 +9,7 @@ require('dotenv').config({ path: __dirname + '/.env' });
 const {
     S3Client,
     DeleteObjectCommand,
-    // PutObjectCommand,
 } = require('@aws-sdk/client-s3');
-// const crypto = require('crypto');
 const config = require('./config');
 const database = require('./database');
 const logger = require('./utils/logger');
@@ -66,13 +64,6 @@ function handleSocket(socket, _io) {
             }
 
             const result = await songService.getSongs(filters, page, limit);
-            
-            // Secure album art URLs
-            for (const song of result.songs) {
-                if (song.cover_art_url) {
-                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
-                }
-            }
             
             paginated(
                 socket,
@@ -367,7 +358,7 @@ function handleSocket(socket, _io) {
         }
     });
 
-    // Play song
+    // Play song (fallback for when cached URL is not available)
     socket.on('song:play', async (data) => {
         try {
             if (!socket.authenticated) {
@@ -386,14 +377,9 @@ function handleSocket(socket, _io) {
                 });
             }
 
+            // Simplified query - just get file_path for URL generation
             const songs = await database.query(
-                `
-                SELECT s.*, a.name as artist, al.title as album
-                FROM songs s
-                LEFT JOIN artists a ON s.artist_id = a.id
-                LEFT JOIN albums al ON s.album_id = al.id
-                WHERE s.id = ?
-            `,
+                'SELECT file_path, title FROM songs WHERE id = ?',
                 [songId]
             );
 
@@ -411,11 +397,8 @@ function handleSocket(socket, _io) {
             socket.emit('song:play', {
                 url: secureAudioUrl,
                 metadata: {
-                    id: song.id,
+                    id: songId,
                     title: song.title,
-                    artist: song.artist,
-                    album: song.album,
-                    duration: song.duration,
                 },
             });
         } catch (error) {
@@ -632,10 +615,15 @@ function handleSocket(socket, _io) {
                 [searchTerm, searchTerm, searchTerm, searchTerm]
             );
 
-            // Secure album art URLs
+            // Secure album art URLs and pre-generate play URLs
             for (const song of songs) {
                 if (song.cover_art_url) {
                     song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+                // Pre-generate signed URL for faster playback
+                if (song.file_path) {
+                    const audioKey = extractS3Key(song.file_path);
+                    song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
                 }
             }
 
@@ -660,6 +648,43 @@ function handleSocket(socket, _io) {
         } catch (error) {
             console.error('Search songs error:', error);
             error(socket, 'song:search', 'Failed to search songs');
+        }
+    });
+
+    // Check if file hash exists
+    socket.on('song:checkHash', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return socket.emit('song:checkHash', {
+                    success: false,
+                    message: 'Authentication required'
+                });
+            }
+
+            const { hash } = data;
+            if (!hash) {
+                return socket.emit('song:checkHash', {
+                    success: false,
+                    message: 'Hash required'
+                });
+            }
+
+            // Check if any song has a file path containing this hash
+            const existing = await database.query(
+                'SELECT id FROM songs WHERE file_path LIKE ?',
+                [`%${hash}%`]
+            );
+
+            socket.emit('song:checkHash', {
+                success: true,
+                exists: existing.length > 0
+            });
+        } catch (error) {
+            console.error('Check hash error:', error);
+            socket.emit('song:checkHash', {
+                success: false,
+                message: 'Failed to check hash'
+            });
         }
     });
 
@@ -691,10 +716,15 @@ function handleSocket(socket, _io) {
                 [socket.user.id]
             );
 
-            // Secure album art URLs
+            // Secure album art URLs and pre-generate play URLs
             for (const song of songs) {
                 if (song.cover_art_url) {
                     song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                }
+                // Pre-generate signed URL for faster playback
+                if (song.file_path) {
+                    const audioKey = extractS3Key(song.file_path);
+                    song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
                 }
             }
 

@@ -55,10 +55,14 @@ docker-compose up -d
 ```bash
 # Ubuntu/Debian
 sudo apt update
-sudo apt install nodejs npm php8.1-fpm nginx mysql-server
+sudo apt install nodejs npm php8.1-fpm nginx mysql-server redis-server
 
 # CentOS/RHEL
-sudo yum install nodejs npm php-fpm nginx mysql-server
+sudo yum install nodejs npm php-fpm nginx mysql-server redis
+
+# Start Redis
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 ```
 
 **Installation:**
@@ -133,7 +137,7 @@ See [HTTPS Setup Guide](https.md) for SSL configuration.
    docker ps
    
    # Manual
-   systemctl status nginx php8.1-fpm mysql
+   systemctl status nginx php8.1-fpm mysql redis-server
    ```
 
 2. **Test application:**

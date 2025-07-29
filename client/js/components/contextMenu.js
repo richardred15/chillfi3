@@ -11,15 +11,15 @@ export default class ContextMenu {
         this.playlists = [];
         this.init();
     }
-    
+
     init() {
         this.createMenu();
         this.setupEventListeners();
     }
-    
+
     createMenu() {
-        this.menu = document.createElement('div');
-        this.menu.className = 'context-menu';
+        this.menu = document.createElement("div");
+        this.menu.className = "context-menu";
         this.menu.innerHTML = `
             <div class="context-menu-item" data-action="play">
                 <img src="client/icons/play.svg" alt="Play" width="16" height="16">
@@ -52,187 +52,222 @@ export default class ContextMenu {
                 <span class="context-menu-text">Edit Metadata</span>
             </div>
         `;
-        
-        this.menu.style.display = 'none';
+
+        this.menu.style.display = "none";
         document.body.appendChild(this.menu);
-        
+
         // Add menu item click handlers
-        this.menu.addEventListener('click', (e) => {
-            const item = e.target.closest('.context-menu-item');
-            if (item && !item.classList.contains('context-menu-submenu')) {
-                this.handleMenuAction(item.dataset.action, item.dataset.playlistId);
+        this.menu.addEventListener("click", (e) => {
+            const item = e.target.closest(".context-menu-item");
+            if (item && !item.classList.contains("context-menu-submenu")) {
+                this.handleMenuAction(
+                    item.dataset.action,
+                    item.dataset.playlistId
+                );
                 this.hideMenu();
             }
         });
-        
+
         // Handle submenu hover
-        const playlistItem = this.menu.querySelector('[data-action="playlist"]');
+        const playlistItem = this.menu.querySelector(
+            '[data-action="playlist"]'
+        );
         if (playlistItem) {
-            playlistItem.addEventListener('mouseenter', () => {
+            playlistItem.addEventListener("mouseenter", () => {
                 this.loadPlaylists();
             });
         }
     }
-    
+
     setupEventListeners() {
         // Universal right-click handler
-        document.addEventListener('contextmenu', (e) => {
-            const songElement = e.target.closest('.song-item, .card');
+        document.addEventListener("contextmenu", (e) => {
+            const songElement = e.target.closest(".song-item, .card");
             if (songElement) {
                 e.preventDefault();
                 this.showMenu(e, songElement);
             }
         });
-        
+
         // Add touch and hold for mobile
         let touchTimer;
         let touchStarted = false;
-        document.addEventListener('touchstart', (e) => {
-            const songElement = e.target.closest('.song-item, .card');
+        document.addEventListener("touchstart", (e) => {
+            const songElement = e.target.closest(".song-item, .card");
             if (songElement) {
                 touchStarted = true;
                 touchTimer = setTimeout(() => {
                     if (touchStarted) {
-                        this.showMenu({
-                            pageX: e.touches[0].pageX,
-                            pageY: e.touches[0].pageY
-                        }, songElement);
+                        this.showMenu(
+                            {
+                                pageX: e.touches[0].pageX,
+                                pageY: e.touches[0].pageY,
+                            },
+                            songElement
+                        );
                     }
                 }, 500);
             }
         });
-        
-        document.addEventListener('touchend', () => {
+
+        document.addEventListener("touchend", () => {
             touchStarted = false;
             if (touchTimer) {
                 clearTimeout(touchTimer);
             }
         });
-        
-        document.addEventListener('touchmove', () => {
+
+        document.addEventListener("touchmove", () => {
             touchStarted = false;
             if (touchTimer) {
                 clearTimeout(touchTimer);
             }
         });
-        
+
         // Hide menu on click outside
-        document.addEventListener('click', (e) => {
+        document.addEventListener("click", (e) => {
             if (!this.menu.contains(e.target)) {
                 this.hideMenu();
             }
         });
     }
-    
+
     showMenu(e, songElement) {
         // Get song data from element
         this.currentSong = this.getSongDataFromElement(songElement);
         this.currentElement = songElement; // Store reference to element
-        
+
         if (!this.currentSong) return;
-        
+
         // Position the menu
         this.menu.style.left = `${e.pageX}px`;
         this.menu.style.top = `${e.pageY}px`;
-        this.menu.style.display = 'block';
+        this.menu.style.display = "block";
     }
-    
+
     hideMenu() {
-        this.menu.style.display = 'none';
+        this.menu.style.display = "none";
     }
-    
+
     getSongDataFromElement(element) {
         const songId = element.dataset.songId;
         const type = element.dataset.type;
-        
+
         if (songId) {
-            const title = element.querySelector('.song-title, .card-title')?.textContent;
-            const artist = element.querySelector('.song-artist, .card-subtitle')?.textContent;
+            let title, artist;
             
+            if (type === 'album') {
+                title = element.dataset.albumTitle;
+                artist = element.dataset.artistName;
+            } else {
+                title = element.dataset.songTitle;
+                artist = element.dataset.songArtist;
+            }
+
             return {
                 id: songId,
                 title: title,
                 artist: artist,
-                type: type
+                type: type,
             };
         }
         return null;
     }
-    
+
     async handleMenuAction(action) {
         if (!this.currentSong) return;
-        
+
         switch (action) {
-            case 'play':
+            case "play":
                 await this.playSong();
                 break;
-            case 'edit':
+            case "edit":
                 await this.editMetadata();
                 break;
-            case 'queue':
+            case "queue":
                 await this.addToQueue();
                 break;
-            case 'share':
-                console.log('Share action triggered');
+            case "share":
+                console.log("Share action triggered");
                 this.showShareModal();
                 break;
-            case 'create-playlist':
+            case "create-playlist":
                 this.showCreatePlaylistModal();
                 break;
-            case 'add-to-playlist':
+            case "add-to-playlist":
                 this.addToPlaylist(arguments[1]); // playlistId
                 break;
         }
     }
-    
+
     async playSong() {
         try {
-            const isAlbum = this.currentElement && this.currentElement.dataset.type === 'album';
-            
+            const isAlbum =
+                this.currentElement &&
+                this.currentElement.dataset.type === "album";
+
             if (isAlbum) {
                 // Get songs from album using album title and artist
                 const albumTitle = this.currentSong.title;
                 const albumArtist = this.currentSong.artist;
-                
-                const albumResponse = await this.api.getSongs({ 
-                    search: albumTitle 
-                }, 1, 100);
-                
-                const songs = albumResponse.data?.items || albumResponse.songs || [];
-                const albumSongs = songs.filter(s => s.album === albumTitle && s.artist === albumArtist);
-                
+
+                const albumResponse = await this.api.getSongs(
+                    {
+                        search: albumTitle,
+                    },
+                    1,
+                    100
+                );
+
+                const songs =
+                    albumResponse.data?.items || albumResponse.songs || [];
+                const albumSongs = songs.filter(
+                    (s) => s.album === albumTitle && s.artist === albumArtist
+                );
+
                 if (window.albumView && albumSongs.length > 0) {
                     window.albumView.show(albumTitle, albumArtist);
                 }
             } else {
                 // Simulate clicking on the song element
-                const element = document.querySelector(`[data-song-id="${this.currentSong.id}"]`);
+                const element = document.querySelector(
+                    `[data-song-id="${this.currentSong.id}"]`
+                );
                 if (element) {
                     element.click();
                 }
             }
         } catch (error) {
-            console.error('Failed to play:', error);
-            this.toast.show('Failed to play');
+            console.error("Failed to play:", error);
+            this.toast.show("Failed to play");
         }
     }
-    
+
     async addToQueue() {
         try {
-            const isAlbum = this.currentElement && this.currentElement.dataset.type === 'album';
-            
+            const isAlbum =
+                this.currentElement &&
+                this.currentElement.dataset.type === "album";
+
             if (isAlbum) {
                 // Get songs from album using album title and artist
                 const albumTitle = this.currentSong.title;
                 const albumArtist = this.currentSong.artist;
-                
-                const albumResponse = await this.api.getSongs({ 
-                    search: albumTitle 
-                }, 1, 100);
-                
-                const songs = albumResponse.data?.items || albumResponse.songs || [];
-                const albumSongs = songs.filter(s => s.album === albumTitle && s.artist === albumArtist);
-                
+
+                const albumResponse = await this.api.getSongs(
+                    {
+                        search: albumTitle,
+                    },
+                    1,
+                    100
+                );
+
+                const songs =
+                    albumResponse.data?.items || albumResponse.songs || [];
+                const albumSongs = songs.filter(
+                    (s) => s.album === albumTitle && s.artist === albumArtist
+                );
+
                 if (window.player && albumSongs.length > 0) {
                     if (window.player.queue.length === 0) {
                         // No existing queue, play first song and create queue
@@ -243,7 +278,9 @@ export default class ContextMenu {
                         // Add to existing queue
                         for (const song of albumSongs) {
                             try {
-                                const response = await this.api.playSong(song.id);
+                                const response = await this.api.playSong(
+                                    song.id
+                                );
                                 window.player.queue.push({
                                     url: response.url,
                                     metadata: {
@@ -251,12 +288,17 @@ export default class ContextMenu {
                                         title: song.title,
                                         artist: song.artist,
                                         album: song.album,
-                                        artwork: song.cover_art_url || song.artwork_url,
-                                        duration: song.duration
-                                    }
+                                        artwork:
+                                            song.cover_art_url ||
+                                            song.artwork_url,
+                                        duration: song.duration,
+                                    },
                                 });
                             } catch (error) {
-                                console.error('Failed to get song URL for queue:', error);
+                                console.error(
+                                    "Failed to get song URL for queue:",
+                                    error
+                                );
                             }
                         }
                         window.player.updateQueueUI();
@@ -272,150 +314,190 @@ export default class ContextMenu {
                     } else {
                         // Add to existing queue
                         try {
-                            const response = await this.api.playSong(this.currentSong.id);
+                            const response = await this.api.playSong(
+                                this.currentSong.id
+                            );
                             window.player.queue.push({
                                 url: response.url,
                                 metadata: {
                                     id: this.currentSong.id,
                                     title: this.currentSong.title,
                                     artist: this.currentSong.artist,
-                                    artwork: this.currentSong.artwork
-                                }
+                                    artwork: this.currentSong.artwork,
+                                },
                             });
                             window.player.updateQueueUI();
                         } catch (error) {
-                            console.error('Failed to get song URL for queue:', error);
+                            console.error(
+                                "Failed to get song URL for queue:",
+                                error
+                            );
                         }
                     }
                 }
-                this.toast.show('Added to queue');
+                this.toast.show("Added to queue");
             }
         } catch (error) {
-            console.error('Failed to add to queue:', error);
-            this.toast.show('Failed to add to queue');
+            console.error("Failed to add to queue:", error);
+            this.toast.show("Failed to add to queue");
         }
     }
-    
+
     async showShareModal() {
-        console.log('showShareModal called', this.currentSong);
-        const modal = document.getElementById('shareModal');
-        console.log('Share modal element:', modal);
-        const isAlbum = this.currentElement && this.currentElement.dataset.type === 'album';
-        console.log('Is album:', isAlbum);
-        
+        console.log("showShareModal called", this.currentSong);
+        const modal = document.getElementById("shareModal");
+        console.log("Share modal element:", modal);
+        const isAlbum =
+            this.currentElement && this.currentElement.dataset.type === "album";
+        console.log("Is album:", isAlbum);
+
         // Populate modal content
-        const artwork = modal.querySelector('.share-item-artwork');
-        const title = modal.querySelector('.share-item-title');
-        const subtitle = modal.querySelector('.share-item-subtitle');
-        const urlInput = document.getElementById('shareUrlInput');
-        
+        const artwork = modal.querySelector(".share-item-artwork");
+        const title = modal.querySelector(".share-item-title");
+        const subtitle = modal.querySelector(".share-item-subtitle");
+        const urlInput = document.getElementById("shareUrlInput");
+
         if (isAlbum) {
             const albumTitle = this.currentSong.title;
             const albumArtist = this.currentSong.artist;
-            
+
             // Get album artwork from first song
-            const albumResponse = await this.api.getSongs({ search: albumTitle }, 1, 1);
-            const songs = albumResponse.data?.items || albumResponse.songs || [];
-            const firstSong = songs.find(s => s.album === albumTitle && s.artist === albumArtist);
-            
-            artwork.style.backgroundImage = `url(${firstSong?.cover_art_url || ''})`;
+            const albumResponse = await this.api.getSongs(
+                { search: albumTitle },
+                1,
+                1
+            );
+            console.log(albumResponse);
+            const songs =
+                albumResponse.data?.items || albumResponse.songs || [];
+            const firstSong = songs.find(
+                (s) => s.album === albumTitle && s.artist === albumArtist
+            );
+
+            // Use secured URL from server response
+            const artworkUrl = firstSong?.cover_art_url || "";
+            artwork.style.backgroundImage = artworkUrl
+                ? `url(${artworkUrl})`
+                : "";
             title.textContent = albumTitle;
             subtitle.textContent = `by ${albumArtist}`;
-            urlInput.value = `${window.location.origin}/?album=${encodeURIComponent(albumTitle)}&artist=${encodeURIComponent(albumArtist)}`;
-        } else if (this.currentSong.type === 'artist') {
+            urlInput.value = `${
+                window.location.origin
+            }/?album=${encodeURIComponent(
+                albumTitle
+            )}&artist=${encodeURIComponent(albumArtist)}`;
+        } else if (this.currentSong.type === "artist") {
             // Handle artist sharing
-            artwork.style.backgroundImage = '';
+            artwork.style.backgroundImage = "";
             title.textContent = this.currentSong.title;
-            subtitle.textContent = 'Artist';
-            urlInput.value = `${window.location.origin}/?artist=${encodeURIComponent(this.currentSong.title)}`;
+            subtitle.textContent = "Artist";
+            urlInput.value = `${
+                window.location.origin
+            }/?artist=${encodeURIComponent(this.currentSong.title)}`;
         } else {
-            console.log('Getting song data for ID:', this.currentSong.id);
+            console.log("Getting song data for ID:", this.currentSong.id);
             // Get full song data from API for songs
             try {
                 const response = await this.api.getSong(this.currentSong.id);
-                console.log('API response:', response);
+                console.log("API response:", response);
                 const songData = response.data?.song || response.song;
                 if (!songData) {
-                    console.log('No song data in response');
+                    console.log("No song data in response");
                     return;
                 }
-                console.log('Song data:', songData);
-                
-                artwork.style.backgroundImage = `url(${songData.cover_art_url || songData.album_artwork || ''})`;
+                console.log("Song data:", songData);
+
+                // Use secured URL from server response
+                const artworkUrl =
+                    songData.cover_art_url || songData.album_artwork || "";
+                artwork.style.backgroundImage = artworkUrl
+                    ? `url(${artworkUrl})`
+                    : "";
                 title.textContent = songData.title;
                 subtitle.textContent = `by ${songData.artist}`;
                 urlInput.value = `${window.location.origin}/?song=${songData.id}`;
             } catch (error) {
-                console.error('Error getting song data:', error);
+                console.error("Error getting song data:", error);
                 // Fallback to basic data - only if it's a numeric ID
                 if (/^\d+$/.test(this.currentSong.id)) {
                     title.textContent = this.currentSong.title;
                     subtitle.textContent = `by ${this.currentSong.artist}`;
                     urlInput.value = `${window.location.origin}/?song=${this.currentSong.id}`;
                 } else {
-                    console.log('Invalid song ID format, cannot create share URL');
+                    console.log(
+                        "Invalid song ID format, cannot create share URL"
+                    );
                     return;
                 }
             }
         }
-        
-        console.log('About to show modal');
-        
-        artwork.style.backgroundSize = 'cover';
-        artwork.style.backgroundPosition = 'center';
-        
+
+        console.log("About to show modal");
+
+        artwork.style.backgroundSize = "cover";
+        artwork.style.backgroundPosition = "center";
+
         // Show modal
-        modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.zIndex = '1000';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        
+        modal.style.display = "flex";
+        modal.style.position = "fixed";
+        modal.style.top = "0";
+        modal.style.left = "0";
+        modal.style.width = "100%";
+        modal.style.height = "100%";
+        modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        modal.style.zIndex = "1000";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+
         // Setup copy button
-        const copyBtn = document.getElementById('copyShareUrl');
+        const copyBtn = document.getElementById("copyShareUrl");
         const newCopyBtn = copyBtn.cloneNode(true);
         copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
-        
-        newCopyBtn.addEventListener('click', () => {
+
+        newCopyBtn.addEventListener("click", () => {
             urlInput.select();
-            document.execCommand('copy');
-            this.toast.show('Share URL copied to clipboard');
+            document.execCommand("copy");
+            this.toast.show("Share URL copied to clipboard");
         });
-        
+
         // Setup close handlers
-        const closeBtn = document.getElementById('shareModalClose');
+        const closeBtn = document.getElementById("shareModalClose");
         const newCloseBtn = closeBtn.cloneNode(true);
         closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-        
-        newCloseBtn.addEventListener('click', () => {
-            modal.style.display = 'none';
+
+        newCloseBtn.addEventListener("click", () => {
+            modal.style.display = "none";
         });
-        
-        modal.addEventListener('click', (e) => {
+
+        modal.addEventListener("click", (e) => {
             if (e.target === modal) {
-                modal.style.display = 'none';
+                modal.style.display = "none";
             }
         });
     }
-    
+
     async editMetadata() {
         try {
-            const isAlbum = this.currentElement && this.currentElement.dataset.type === 'album';
-            
+            const isAlbum =
+                this.currentElement &&
+                this.currentElement.dataset.type === "album";
+
             if (isAlbum) {
                 // For albums, get first song to edit album metadata
                 const albumTitle = this.currentSong.title;
                 const albumArtist = this.currentSong.artist;
-                
-                const albumResponse = await this.api.getSongs({ search: albumTitle }, 1, 1);
-                const songs = albumResponse.data?.items || albumResponse.songs || [];
-                const firstSong = songs.find(s => s.album === albumTitle && s.artist === albumArtist);
-                
+
+                const albumResponse = await this.api.getSongs(
+                    { search: albumTitle },
+                    1,
+                    1
+                );
+                const songs =
+                    albumResponse.data?.items || albumResponse.songs || [];
+                const firstSong = songs.find(
+                    (s) => s.album === albumTitle && s.artist === albumArtist
+                );
+
                 if (firstSong) {
                     this.metadataEditor.show(firstSong, true);
                 }
@@ -427,36 +509,38 @@ export default class ContextMenu {
                 }
             }
         } catch (error) {
-            console.error('Failed to load song data:', error);
-            this.toast.show('Failed to load song data');
+            console.error("Failed to load song data:", error);
+            this.toast.show("Failed to load song data");
         }
     }
-    
+
     async loadPlaylists() {
         try {
             const response = await this.api.getPlaylists();
-            this.playlists = response.data?.playlists || response.playlists || [];
+            this.playlists =
+                response.data?.playlists || response.playlists || [];
             this.updatePlaylistSubmenu();
         } catch (error) {
-            console.error('Failed to load playlists:', error);
+            console.error("Failed to load playlists:", error);
         }
     }
-    
+
     updatePlaylistSubmenu() {
-        const playlistList = this.menu.querySelector('.playlist-list');
+        const playlistList = this.menu.querySelector(".playlist-list");
         if (!playlistList) return;
-        
-        playlistList.innerHTML = '';
-        
+
+        playlistList.innerHTML = "";
+
         if (this.playlists.length === 0) {
-            playlistList.innerHTML = '<div class="playlist-empty">No playlists found</div>';
+            playlistList.innerHTML =
+                '<div class="playlist-empty">No playlists found</div>';
             return;
         }
-        
-        this.playlists.forEach(playlist => {
-            const item = document.createElement('div');
-            item.className = 'context-menu-item';
-            item.dataset.action = 'add-to-playlist';
+
+        this.playlists.forEach((playlist) => {
+            const item = document.createElement("div");
+            item.className = "context-menu-item";
+            item.dataset.action = "add-to-playlist";
             item.dataset.playlistId = playlist.id;
             item.innerHTML = `
                 <img src="client/icons/playlist.svg" alt="Playlist" width="16" height="16">
@@ -465,14 +549,14 @@ export default class ContextMenu {
             playlistList.appendChild(item);
         });
     }
-    
+
     showCreatePlaylistModal() {
         // Create modal if it doesn't exist
-        let modal = document.getElementById('createPlaylistModal');
+        let modal = document.getElementById("createPlaylistModal");
         if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'createPlaylistModal';
-            modal.className = 'modal';
+            modal = document.createElement("div");
+            modal.id = "createPlaylistModal";
+            modal.className = "modal";
             modal.innerHTML = `
                 <div class="modal-content">
                     <div class="modal-header">
@@ -498,66 +582,69 @@ export default class ContextMenu {
             `;
             document.body.appendChild(modal);
         }
-        
+
         // Reset form
-        document.getElementById('playlistName').value = '';
-        document.getElementById('playlistPublic').checked = false;
-        
+        document.getElementById("playlistName").value = "";
+        document.getElementById("playlistPublic").checked = false;
+
         // Show modal
-        modal.style.display = 'flex';
-        document.getElementById('playlistName').focus();
-        
+        modal.style.display = "flex";
+        document.getElementById("playlistName").focus();
+
         // Event handlers
         const closeModal = () => {
-            modal.style.display = 'none';
+            modal.style.display = "none";
         };
-        
-        document.getElementById('createPlaylistClose').onclick = closeModal;
-        document.getElementById('createPlaylistCancel').onclick = closeModal;
-        
-        document.getElementById('createPlaylistSubmit').onclick = async () => {
-            const name = document.getElementById('playlistName').value.trim();
-            const isPublic = document.getElementById('playlistPublic').checked;
-            
+
+        document.getElementById("createPlaylistClose").onclick = closeModal;
+        document.getElementById("createPlaylistCancel").onclick = closeModal;
+
+        document.getElementById("createPlaylistSubmit").onclick = async () => {
+            const name = document.getElementById("playlistName").value.trim();
+            const isPublic = document.getElementById("playlistPublic").checked;
+
             if (!name) {
-                this.toast.show('Please enter a playlist name');
+                this.toast.show("Please enter a playlist name");
                 return;
             }
-            
+
             try {
                 const response = await this.api.createPlaylist(name, isPublic);
-                const playlistId = response.data?.playlistId || response.playlistId;
-                
+                const playlistId =
+                    response.data?.playlistId || response.playlistId;
+
                 if (playlistId) {
                     // Add current song to the new playlist
                     await this.addToPlaylist(playlistId);
-                    this.toast.show(`Created playlist "${name}" and added song`);
+                    this.toast.show(
+                        `Created playlist "${name}" and added song`
+                    );
                 } else {
                     this.toast.show(`Created playlist "${name}"`);
                 }
-                
+
                 // Refresh playlist list
                 await this.loadPlaylists();
-                
+
                 // Refresh sidebar playlists
                 if (window.playlistManager) {
                     await window.playlistManager.refresh();
                 }
-                
+
                 closeModal();
             } catch (error) {
-                console.error('Failed to create playlist:', error);
-                this.toast.show('Failed to create playlist');
+                console.error("Failed to create playlist:", error);
+                this.toast.show("Failed to create playlist");
             }
         };
-        
+
         // Enter key to submit
-        document.getElementById('playlistName').onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('createPlaylistSubmit').click();
+        document.getElementById("playlistName").onkeypress = (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("createPlaylistSubmit").click();
             }
         };
-        
+
         // Click outside to close
         modal.onclick = (e) => {
             if (e.target === modal) {
@@ -565,44 +652,65 @@ export default class ContextMenu {
             }
         };
     }
-    
+
     async addToPlaylist(playlistId) {
-        console.log('Adding to playlist:', playlistId, 'Current song:', this.currentSong);
+        console.log(
+            "Adding to playlist:",
+            playlistId,
+            "Current song:",
+            this.currentSong
+        );
         if (!this.currentSong || !playlistId) {
-            console.log('Missing song or playlist ID');
+            console.log("Missing song or playlist ID");
             return;
         }
-        
+
         try {
-            const isAlbum = this.currentElement && this.currentElement.dataset.type === 'album';
-            
+            const isAlbum =
+                this.currentElement &&
+                this.currentElement.dataset.type === "album";
+
             if (isAlbum) {
                 // Add all songs from album
                 const albumTitle = this.currentSong.title;
                 const albumArtist = this.currentSong.artist;
-                
-                const albumResponse = await this.api.getSongs({ 
-                    search: albumTitle 
-                }, 1, 100);
-                
-                const songs = albumResponse.data?.items || albumResponse.songs || [];
-                const albumSongs = songs.filter(s => s.album === albumTitle && s.artist === albumArtist);
-                
+
+                const albumResponse = await this.api.getSongs(
+                    {
+                        search: albumTitle,
+                    },
+                    1,
+                    100
+                );
+
+                const songs =
+                    albumResponse.data?.items || albumResponse.songs || [];
+                const albumSongs = songs.filter(
+                    (s) => s.album === albumTitle && s.artist === albumArtist
+                );
+
                 for (const song of albumSongs) {
                     await this.api.addToPlaylist(playlistId, song.id);
                 }
-                
+
                 this.toast.show(`Added ${albumSongs.length} songs to playlist`);
             } else {
                 // Add single song
-                console.log('Adding single song to playlist:', playlistId, this.currentSong.id);
-                const result = await this.api.addToPlaylist(playlistId, this.currentSong.id);
-                console.log('Add to playlist result:', result);
-                this.toast.show('Added to playlist');
+                console.log(
+                    "Adding single song to playlist:",
+                    playlistId,
+                    this.currentSong.id
+                );
+                const result = await this.api.addToPlaylist(
+                    playlistId,
+                    this.currentSong.id
+                );
+                console.log("Add to playlist result:", result);
+                this.toast.show("Added to playlist");
             }
         } catch (error) {
-            console.error('Failed to add to playlist:', error);
-            this.toast.show('Failed to add to playlist');
+            console.error("Failed to add to playlist:", error);
+            this.toast.show("Failed to add to playlist");
         }
     }
 }

@@ -17,6 +17,11 @@ DB_USER=musiclib
 DB_PASSWORD=your_mysql_password
 DB_NAME=musiclib
 
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+
 # AWS S3 (optional)
 AWS_ACCESS_KEY_ID=your_aws_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret
@@ -27,6 +32,10 @@ S3_BUCKET_NAME=chillfi
 PORT=3005
 JWT_SECRET=your_jwt_secret
 NODE_ENV=production
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/chillfi3.log
 ```
 
 3. Start the server:
@@ -51,6 +60,8 @@ create-admin admin your_password
 - **Real-time**: Socket.IO for real-time communication
 - **File Storage**: AWS S3 integration for audio files and images
 - **Database**: MySQL with automatic schema management
+- **Caching**: Redis for session management and caching
+- **Logging**: Winston for structured logging
 
 ## API Documentation
 

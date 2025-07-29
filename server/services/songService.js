@@ -2,7 +2,7 @@
  * Song Service
  */
 const database = require('../database');
-// const { validate } = require('../utils/validation');
+const { extractS3Key, generateSecureUrl, secureImageUrl } = require('../utils/s3Utils');
 
 async function getSongs(filters = {}, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
@@ -56,7 +56,7 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
 
     const songs = await database.query(
         `
-        SELECT s.id, s.title, s.duration, s.genre, s.track_number,
+        SELECT s.id, s.title, s.duration, s.genre, s.track_number, s.file_path,
                a.name as artist, al.title as album, al.release_year as year, al.cover_art_url,
                u.username as uploaded_by_username,
                COUNT(sl.id) as listen_count
@@ -72,6 +72,17 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
     `,
         queryParams
     );
+
+    // Secure URLs and generate play URLs
+    for (const song of songs) {
+        if (song.cover_art_url) {
+            song.cover_art_url = await secureImageUrl(song.cover_art_url);
+        }
+        if (song.file_path) {
+            const audioKey = extractS3Key(song.file_path);
+            song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
+        }
+    }
 
     const [totalCount] = await database.query(
         `
@@ -109,7 +120,19 @@ async function getSongById(songId) {
         [songId]
     );
 
-    return songs.length > 0 ? songs[0] : null;
+    if (songs.length === 0) return null;
+    
+    const song = songs[0];
+    
+    // Secure URLs
+    if (song.album_artwork) {
+        song.album_artwork = await secureImageUrl(song.album_artwork);
+    }
+    if (song.cover_art_url) {
+        song.cover_art_url = await secureImageUrl(song.cover_art_url);
+    }
+    
+    return song;
 }
 
 async function findOrCreateArtist(artistName, uploadedBy) {

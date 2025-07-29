@@ -15,6 +15,7 @@ class API {
         this.reconnectDelay = 5000;
         this.onConnectionChange = null;
         this.events = new APIEvents();
+        this.urlCache = new Map(); // Cache for pre-generated URLs
     }
 
     // Initialize connection
@@ -239,7 +240,7 @@ class API {
                 limit,
             });
 
-            // Cache songs for offline use - handle paginated response structure
+            // Cache songs for offline use and URLs for faster playback
             if (
                 window.offlineManager &&
                 result.success &&
@@ -249,6 +250,8 @@ class API {
                 result.data.items.forEach((song) =>
                     window.offlineManager.cacheSong(song)
                 );
+                // Cache pre-generated URLs
+                this.cacheSongUrls(result.data.items);
             }
             return result;
         } catch (error) {
@@ -311,6 +314,18 @@ class API {
 
     async playSong(songId) {
         try {
+            // Check if we have a cached URL first
+            const cachedUrl = this.getCachedUrl(songId);
+            if (cachedUrl) {
+                // Return immediately with cached URL
+                return {
+                    url: cachedUrl,
+                    metadata: { id: songId }, // Minimal metadata, full metadata should be available client-side
+                    cached: true
+                };
+            }
+
+            // Fallback to server request if no cached URL
             const result = await this.emit("song:play", { songId });
 
             // Cache the song metadata for offline use
@@ -353,16 +368,37 @@ class API {
     }
 
     async getRecentlyPlayed(limit = 10, offset = 0) {
-        return await this.emit("song:recentlyPlayed", { limit, offset });
+        const result = await this.emit("song:recentlyPlayed", { limit, offset });
+        
+        // Cache pre-generated URLs from recently played songs
+        if (result.success && result.songs) {
+            this.cacheSongUrls(result.songs);
+        }
+        
+        return result;
     }
 
     async searchSongs(query, page = 1, limit = 20) {
-        return await this.emit("song:search", { query, page, limit });
+        const result = await this.emit("song:search", { query, page, limit });
+        
+        // Cache pre-generated URLs from search results
+        if (result.success && result.songs) {
+            this.cacheSongUrls(result.songs);
+        }
+        
+        return result;
     }
 
     async getAlbums(page = 1, limit = 20) {
         try {
             const result = await this.emit("albums:list", { page, limit });
+            
+            // Cache album artwork URLs (albums don't have play URLs)
+            if (result.success && result.data?.items) {
+                // Albums don't need URL caching since they don't have play_url
+                // but we could cache album artwork if needed
+            }
+            
             return result;
         } catch (error) {
             // Return cached albums if offline
@@ -416,11 +452,18 @@ class API {
     }
 
     async getPlaylist(playlistId, songPage = 1, songLimit = 50) {
-        return await this.emit("playlist:get", {
+        const result = await this.emit("playlist:get", {
             playlistId,
             songPage,
             songLimit,
         });
+        
+        // Cache pre-generated URLs from playlist songs
+        if (result.success && result.songs) {
+            this.cacheSongUrls(result.songs);
+        }
+        
+        return result;
     }
 
     async createPlaylist(name, isPublic = false) {
@@ -437,10 +480,6 @@ class API {
 
     async addSongToPlaylist(playlistId, songId) {
         return await this.emit("playlist:addSong", { playlistId, songId });
-    }
-
-    async addToPlaylist(playlistId, songId) {
-        return await this.addSongToPlaylist(playlistId, songId);
     }
 
     async removeSongFromPlaylist(playlistId, songId) {
@@ -476,6 +515,35 @@ class API {
     // Image upload methods
     async uploadImageChunk(chunkData) {
         return await this.emit("song:uploadImageChunk", chunkData);
+    }
+
+    // Check if file hash already exists
+    async checkFileHash(hash) {
+        return await this.emit("song:checkHash", { hash });
+    }
+
+    // Cache song URLs from API responses
+    cacheSongUrls(songs) {
+        if (!Array.isArray(songs)) songs = [songs];
+        
+        songs.forEach(song => {
+            if (song.id && song.play_url) {
+                this.urlCache.set(song.id, {
+                    url: song.play_url,
+                    expires: Date.now() + (45 * 60 * 1000) // 45 minutes
+                });
+            }
+        });
+    }
+
+    // Get cached URL or null if expired/missing
+    getCachedUrl(songId) {
+        const cached = this.urlCache.get(songId);
+        if (cached && Date.now() < cached.expires) {
+            return cached.url;
+        }
+        this.urlCache.delete(songId);
+        return null;
     }
 
     attemptReconnect() {

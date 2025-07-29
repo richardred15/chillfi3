@@ -370,6 +370,14 @@ class UploadManager {
         }
     }
 
+    // Generate SHA-256 hash of file
+    async generateFileHash(file) {
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     // Extract metadata from file item
     async extractMetadataFromItem(item) {
         const artwork = await this.extractArtworkFromItem(item);
@@ -440,6 +448,16 @@ class UploadManager {
             
             try {
                 this.updateUploadProgress(i + 1, this.uploadQueue.length, file.name, 0);
+                
+                // Generate hash and check if file already exists
+                const fileHash = await this.generateFileHash(file);
+                const hashCheck = await window.api.checkFileHash(fileHash);
+                
+                if (hashCheck.exists) {
+                    element.classList.add('skipped');
+                    this.showFileError(element, 'File already exists (duplicate)');
+                    continue;
+                }
                 
                 const result = await this.uploadFileWithProgress(file, metadata, token, (progress) => {
                     this.updateUploadProgress(i + 1, this.uploadQueue.length, file.name, progress);
@@ -649,14 +667,17 @@ class UploadManager {
         if (uploaded > 0) {
             message = `${uploaded} files uploaded successfully`;
             if (failed > 0) message += `, ${failed} failed`;
-            if (skipped > 0) message += `, ${skipped} skipped`;
+            if (skipped > 0) message += `, ${skipped} skipped (duplicates)`;
             
             // Refresh content to show new songs
             if (window.contentManager) {
                 window.contentManager.loadAllSongs();
             }
+        } else if (skipped > 0 && failed === 0) {
+            message = `${skipped} files skipped (duplicates)`;
         } else if (failed > 0) {
             message = `${failed} files failed to upload`;
+            if (skipped > 0) message += `, ${skipped} skipped (duplicates)`;
         } else {
             message = 'Upload cancelled';
         }

@@ -35,8 +35,7 @@ Client Application
 │   ├── fileHandlers.js (File processing utilities)
 │   └── id3Parser.js (Metadata extraction)
 └── Workers
-    ├── id3Worker.js (Background metadata parsing)
-    └── id3Parser-worker.js (Legacy worker)
+    └── id3Worker.js (Background metadata parsing)
 ```
 
 ### State Management
@@ -68,8 +67,10 @@ Client Application
 - **Runtime**: Node.js
 - **Framework**: Express.js with Socket.IO
 - **Database**: MySQL with connection pooling
+- **Caching**: Redis for session management and data caching
 - **File Storage**: AWS S3
 - **Authentication**: JWT tokens
+- **Logging**: Winston for structured logging
 - **Security**: Helmet, CORS, rate limiting
 
 ### Service Architecture
@@ -86,8 +87,12 @@ Server Application
 │   ├── songs.js (Music library operations)
 │   ├── playlists.js (Playlist management)
 │   └── player.js (Queue management)
+├── Services
+│   ├── redisService.js (Redis caching operations)
+│   ├── songService.js (Music library business logic)
+│   └── uploadService.js (File upload processing)
 ├── Utilities
-│   ├── logger.js (Centralized logging)
+│   ├── logger.js (Winston-based structured logging)
 │   ├── response.js (Standardized responses)
 │   └── validation.js (Input validation)
 └── Middleware
@@ -200,9 +205,10 @@ chillfi/
 
 ### Server-side Performance
 - **Database Optimization**: Indexed queries and connection pooling
-- **Caching**: In-memory caching for frequently accessed data
+- **Redis Caching**: Distributed caching for session data and frequently accessed content
 - **File Streaming**: Efficient audio file delivery
 - **Resource Management**: Proper cleanup and memory management
+- **Structured Logging**: Winston-based logging with configurable levels and rotation
 
 ### Network Performance
 - **CDN Ready**: Static assets optimized for CDN delivery

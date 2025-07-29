@@ -109,6 +109,10 @@ class ContentManager {
             songItem.className = "song-item";
             songItem.dataset.songId = song.id;
             songItem.dataset.type = "song";
+            songItem.dataset.songTitle = song.title || "Unknown Title";
+            songItem.dataset.songArtist = song.artist || "Unknown Artist";
+            songItem.dataset.songAlbum = song.album || "Unknown Album";
+            songItem.dataset.songDuration = song.duration || 0;
 
             const artworkStyle = song.cover_art_url
                 ? `background: url(${song.cover_art_url}) center/cover no-repeat`
@@ -172,6 +176,8 @@ class ContentManager {
             card.dataset.albumId = album.id;
             card.dataset.songId = album.id; // Use album ID as fallback for context menu
             card.dataset.type = "album";
+            card.dataset.albumTitle = album.title || "Unknown Album";
+            card.dataset.artistName = album.artist || "Unknown Artist";
 
             const artworkStyle = album.cover_art_url
                 ? `background: url(${album.cover_art_url}) center/cover no-repeat`
@@ -223,6 +229,9 @@ class ContentManager {
             card.className = "card";
             card.dataset.songId = song.id;
             card.dataset.type = "song";
+            card.dataset.songTitle = song.title || "Unknown Title";
+            card.dataset.songArtist = song.artist || "Unknown Artist";
+            card.dataset.songAlbum = song.album || "Unknown Album";
 
             const artworkStyle = song.cover_art_url
                 ? `background: url(${song.cover_art_url}) center/cover no-repeat`
@@ -579,8 +588,10 @@ class ContentManager {
             const card = document.createElement("div");
             card.className = "card";
             card.dataset.artistName = artist.name;
-            card.dataset.songId = `artist_${artist.name}`; // For context menu
+            //card.dataset.songId = `artist_${artist.name}`; // For context menu
+            console.log("Artist:", artist);
             card.dataset.type = "artist";
+            card.dataset.albumTitle = artist.name; // For context menu title (artists use albumTitle field)
 
             const artworkStyle = artist.artwork
                 ? `background: url(${artist.artwork}) center/cover no-repeat`
@@ -725,6 +736,10 @@ class ContentManager {
             card.className = "card";
             card.dataset.albumTitle = album.title;
             card.dataset.artistName = album.artist;
+            card.dataset.albumYear = album.year || "Unknown Year";
+            card.dataset.songCount = album.songs.length;
+            card.dataset.songId = `album_${album.title}_${album.artist}`;
+            card.dataset.type = "album";
 
             const artworkStyle = album.artwork
                 ? `background: url(${album.artwork}) center/cover no-repeat`
