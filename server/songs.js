@@ -17,6 +17,7 @@ const { success, error, paginated } = require('./utils/response');
 const rateLimiter = require('./middleware/rateLimiter');
 const uploadService = require('./services/uploadService');
 const songService = require('./services/songService');
+const deletionService = require('./services/deletionService');
 const { generateSecureUrl } = uploadService;
 const { extractS3Key, secureImageUrl } = require('./utils/s3Utils');
 
@@ -291,59 +292,77 @@ function handleSocket(socket, _io) {
     socket.on('song:delete', async (data) => {
         try {
             if (!socket.authenticated) {
-                return socket.emit('song:delete', {
-                    success: false,
-                    message: 'Authentication required',
-                });
+                return error(socket, 'song:delete', 'Authentication required');
             }
 
             const { songId } = data;
 
-            // Check ownership
-            const songs = await database.query(
-                'SELECT uploaded_by, file_path FROM songs WHERE id = ?',
-                [songId]
+            if (!songId) {
+                return error(socket, 'song:delete', 'Song ID required');
+            }
+
+            const result = await deletionService.deleteSong(
+                songId,
+                socket.user.id,
+                socket.user.is_admin
             );
 
-            if (songs.length === 0) {
-                return socket.emit('song:delete', {
-                    success: false,
-                    message: 'Song not found',
-                });
+            success(socket, 'song:delete', result);
+        } catch (err) {
+            logger.error('Delete song error', { error: err.message, songId: data.songId, userId: socket.user?.id });
+            error(socket, 'song:delete', err.message || 'Failed to delete song');
+        }
+    });
+
+    // Delete album
+    socket.on('album:delete', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return error(socket, 'album:delete', 'Authentication required');
             }
 
-            if (
-                songs[0].uploaded_by !== socket.user.id &&
-                !socket.user.is_admin
-            ) {
-                return socket.emit('song:delete', {
-                    success: false,
-                    message: 'Unauthorized',
-                });
+            const { albumId } = data;
+
+            if (!albumId) {
+                return error(socket, 'album:delete', 'Album ID required');
             }
 
-            const song = songs[0];
+            const result = await deletionService.deleteAlbum(
+                albumId,
+                socket.user.id,
+                socket.user.is_admin
+            );
 
-            // Delete from S3
-            if (song.file_path) {
-                const fileKey = song.file_path.split('/').pop();
-                const deleteCommand = new DeleteObjectCommand({
-                    Bucket: BUCKET_NAME,
-                    Key: `songs/${fileKey}`,
-                });
-                await s3Client.send(deleteCommand);
+            success(socket, 'album:delete', result);
+        } catch (err) {
+            logger.error('Delete album error', { error: err.message, albumId: data.albumId, userId: socket.user?.id });
+            error(socket, 'album:delete', err.message || 'Failed to delete album');
+        }
+    });
+
+    // Delete artist
+    socket.on('artist:delete', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return error(socket, 'artist:delete', 'Authentication required');
             }
 
-            // Delete from database
-            await database.query('DELETE FROM songs WHERE id = ?', [songId]);
+            const { artistId } = data;
 
-            socket.emit('song:delete', { success: true });
-        } catch (error) {
-            console.error('Delete song error:', error);
-            socket.emit('song:delete', {
-                success: false,
-                message: 'Failed to delete song',
-            });
+            if (!artistId) {
+                return error(socket, 'artist:delete', 'Artist ID required');
+            }
+
+            const result = await deletionService.deleteArtist(
+                artistId,
+                socket.user.id,
+                socket.user.is_admin
+            );
+
+            success(socket, 'artist:delete', result);
+        } catch (err) {
+            logger.error('Delete artist error', { error: err.message, artistId: data.artistId, userId: socket.user?.id });
+            error(socket, 'artist:delete', err.message || 'Failed to delete artist');
         }
     });
 

@@ -301,6 +301,23 @@ async function cleanup() {
     }
 }
 
+// Transaction support
+async function beginTransaction() {
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    return connection;
+}
+
+async function commitTransaction(connection) {
+    await connection.commit();
+    connection.release();
+}
+
+async function rollbackTransaction(connection) {
+    await connection.rollback();
+    connection.release();
+}
+
 module.exports = {
     init,
     getConnection,
@@ -308,4 +325,7 @@ module.exports = {
     cleanup,
     generateSchemaSQL,
     runSchemaMigrations,
+    beginTransaction,
+    commitTransaction,
+    rollbackTransaction,
 };

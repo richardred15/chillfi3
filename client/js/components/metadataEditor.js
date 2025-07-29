@@ -9,9 +9,10 @@ class MetadataEditor {
     }
 
     // Show metadata editor modal
-    show(songData, isAlbum = false) {
+    show(songData, isAlbum = false, editMode = 'song') {
         this.currentSong = songData;
         this.isAlbum = isAlbum;
+        this.editMode = editMode; // 'song', 'album', or 'artist'
         const modal = this.createModal();
         document.body.appendChild(modal);
     }
@@ -20,53 +21,69 @@ class MetadataEditor {
     createModal() {
         const modal = document.createElement("div");
         modal.className = "metadata-modal";
+        
+        const isArtist = this.editMode === 'artist';
+        const modalTitle = isArtist ? 'Edit Artist' : (this.isAlbum ? 'Edit Album' : 'Edit Song Metadata');
+        const artLabel = isArtist ? 'Artist Image' : 'Album Art';
+        
         modal.innerHTML = `
             <div class="metadata-modal-content">
                 <div class="metadata-modal-header">
-                    <h2>Edit Song Metadata</h2>
+                    <h2>${modalTitle}</h2>
                     <button class="metadata-modal-close"><img src="client/icons/close.svg" alt="Close" width="16" height="16"></button>
                 </div>
                 <form class="metadata-form" id="metadataForm">
                     <div class="form-group">
-                        <label>Album Art</label>
+                        <label>${artLabel}</label>
                         <div class="album-art-section">
                             <div class="album-art-preview" id="albumArtPreview">
                                 <img src="client/icons/upload.svg" alt="Upload" width="24" height="24">
                             </div>
                             <input type="file" id="albumArtInput" accept="image/*" style="display: none;">
-                            <button type="button" class="btn-upload-art" onclick="document.getElementById('albumArtInput').click()">Change Art</button>
+                            <button type="button" class="btn-upload-art" onclick="document.getElementById('albumArtInput').click()">Change ${isArtist ? 'Image' : 'Art'}</button>
                         </div>
                     </div>
-                    <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
-                        <label for="songTitle">Title</label>
-                        <input type="text" id="songTitle" name="title" value="${
-                            this.currentSong.title || ""
-                        }" ${this.isAlbum ? 'disabled' : 'required'}>
-                    </div>
-                    <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
-                        <label for="songArtist">Artist</label>
-                        <input type="text" id="songArtist" name="artist" value="${
-                            this.currentSong.artist || ""
-                        }" ${this.isAlbum ? 'disabled' : 'required'}>
-                    </div>
-                    <div class="form-group">
-                        <label for="songAlbum">${this.isAlbum ? 'Album Name' : 'Album'}</label>
-                        <input type="text" id="songAlbum" name="album" value="${
-                            this.currentSong.album || ""
-                        }" ${this.isAlbum ? 'required' : ''}>
-                    </div>
-                    <div class="form-group">
-                        <label for="songGenre">Genre</label>
-                        <input type="text" id="songGenre" name="genre" value="${
-                            this.currentSong.genre || ""
-                        }">
-                    </div>
-                    <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
-                        <label for="songTrackNumber">Track Number</label>
-                        <input type="number" id="songTrackNumber" name="track_number" value="${
-                            this.currentSong.track_number || ""
-                        }" min="1" ${this.isAlbum ? 'disabled' : ''}>
-                    </div>
+                    ${isArtist ? `
+                        <div class="form-group">
+                            <label for="artistName">Artist Name</label>
+                            <input type="text" id="artistName" name="name" value="${this.currentSong.title || ""}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="artistBio">Biography</label>
+                            <textarea id="artistBio" name="bio" rows="4" placeholder="Enter artist biography...">${this.currentSong.bio || ""}</textarea>
+                        </div>
+                    ` : `
+                        <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
+                            <label for="songTitle">Title</label>
+                            <input type="text" id="songTitle" name="title" value="${
+                                this.currentSong.title || ""
+                            }" ${this.isAlbum ? 'disabled' : 'required'}>
+                        </div>
+                        <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
+                            <label for="songArtist">Artist</label>
+                            <input type="text" id="songArtist" name="artist" value="${
+                                this.currentSong.artist || ""
+                            }" ${this.isAlbum ? 'disabled' : 'required'}>
+                        </div>
+                        <div class="form-group">
+                            <label for="songAlbum">${this.isAlbum ? 'Album Name' : 'Album'}</label>
+                            <input type="text" id="songAlbum" name="album" value="${
+                                this.currentSong.album || ""
+                            }" ${this.isAlbum ? 'required' : ''}>
+                        </div>
+                        <div class="form-group">
+                            <label for="songGenre">Genre</label>
+                            <input type="text" id="songGenre" name="genre" value="${
+                                this.currentSong.genre || ""
+                            }">
+                        </div>
+                        <div class="form-group" ${this.isAlbum ? 'style="display: none;"' : ''}>
+                            <label for="songTrackNumber">Track Number</label>
+                            <input type="number" id="songTrackNumber" name="track_number" value="${
+                                this.currentSong.track_number || ""
+                            }" min="1" ${this.isAlbum ? 'disabled' : ''}>
+                        </div>
+                    `}
                     <div class="form-actions">
                         <button type="button" class="btn-cancel">Cancel</button>
                         <button type="submit" class="btn-save">Save Changes</button>
@@ -139,7 +156,21 @@ class MetadataEditor {
 
         try {
             let response;
-            if (this.isAlbum) {
+            if (this.editMode === 'artist') {
+                // Use artist update endpoint
+                const artistUpdates = {
+                    name: metadata.name,
+                    bio: metadata.bio
+                };
+                // Include image if changed
+                const preview = modal.querySelector('#albumArtPreview');
+                if (preview.dataset.newArt) {
+                    artistUpdates.image_data = preview.dataset.newArt;
+                } else if (preview.dataset.newArtUrl) {
+                    artistUpdates.image_url = preview.dataset.newArtUrl;
+                }
+                response = await this.api.updateArtist(this.currentSong.id, artistUpdates);
+            } else if (this.isAlbum) {
                 // Use album update endpoint
                 const albumUpdates = {
                     title: metadata.album,
@@ -152,12 +183,38 @@ class MetadataEditor {
             }
             
             if (response.success) {
-                this.toast.show(this.isAlbum ? "Album updated successfully" : "Metadata updated successfully");
+                const successMessage = this.editMode === 'artist' ? "Artist updated successfully" : 
+                                     (this.isAlbum ? "Album updated successfully" : "Metadata updated successfully");
+                this.toast.show(successMessage);
                 modal.remove();
 
                 // Refresh content if content manager exists
                 if (window.contentManager) {
-                    window.contentManager.init();
+                    if (this.editMode === 'artist') {
+                        // For artist updates, refresh artist-related content without full reset
+                        const currentSection = document.querySelector('.section[style*="block"]');
+                        if (currentSection) {
+                            const sectionId = currentSection.id;
+                            if (sectionId.includes('artist') || sectionId.includes('Artist')) {
+                                // Refresh the current artist view
+                                if (sectionId === 'artistsSection') {
+                                    window.contentManager.loadArtists();
+                                } else if (sectionId === 'artistAlbumsSection') {
+                                    // Keep the current artist albums view
+                                    const title = currentSection.querySelector('.section-title')?.textContent;
+                                    if (title && title.includes('Albums by')) {
+                                        const artistName = title.replace('Albums by ', '');
+                                        window.contentManager.showArtistAlbums('current_user', artistName);
+                                    }
+                                }
+                            } else {
+                                // For other sections, do minimal refresh
+                                window.contentManager.renderHomeSections();
+                            }
+                        }
+                    } else {
+                        window.contentManager.init();
+                    }
                 }
             } else {
                 throw new Error(response.message || "Update failed");

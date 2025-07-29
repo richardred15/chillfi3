@@ -44,7 +44,7 @@ function makeApiRequest($endpoint)
     if ($decoded === null) {
         error_log("JSON decode failed for: {$response}");
     }
-    
+
     return $decoded;
 }
 
@@ -64,7 +64,7 @@ if (isset($_GET['album'])) {
             $endpoint .= "&artist=" . urlencode($artist);
         }
     }
-    
+
     $debugInfo['endpoint'] = $apiUrl . $endpoint;
     $response = makeApiRequest($endpoint);
     $debugInfo['response'] = $response;
@@ -351,7 +351,7 @@ function escapeHtml($text)
                         <img src="client/icons/previous.svg" alt="Previous" width="20" height="20">
                     </button>
                     <button class="player-button primary">
-                        <img src="client/icons/play.svg" alt="Play" width="24" height="24">
+                        <img src="client/icons/play_white.svg" alt="Play" width="24" height="24">
                     </button>
                     <button class="player-button">
                         <img src="client/icons/next.svg" alt="Next" width="20" height="20">

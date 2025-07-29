@@ -321,6 +321,18 @@ class API {
         return await this.emit("song:delete", { songId });
     }
 
+    async deleteAlbum(albumId) {
+        return await this.emit("album:delete", { albumId });
+    }
+
+    async deleteArtist(artistId) {
+        return await this.emit("artist:delete", { artistId });
+    }
+
+    async updateArtist(artistId, metadata) {
+        return await this.emit("artist:update", { artistId, metadata });
+    }
+
     async playSong(songId) {
         try {
             // Check if we have a cached URL first

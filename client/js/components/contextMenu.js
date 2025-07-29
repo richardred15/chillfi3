@@ -51,6 +51,10 @@ export default class ContextMenu {
                 <img src="client/icons/edit.svg" alt="Edit" width="16" height="16">
                 <span class="context-menu-text">Edit Metadata</span>
             </div>
+            <div class="context-menu-item context-menu-danger" data-action="delete">
+                <img src="client/icons/delete.svg" alt="Delete" width="16" height="16">
+                <span class="context-menu-text">Delete</span>
+            </div>
         `;
 
         this.menu.style.display = "none";
@@ -189,6 +193,9 @@ export default class ContextMenu {
                 break;
             case "add-to-playlist":
                 this.addToPlaylist(arguments[1]); // playlistId
+                break;
+            case "delete":
+                this.handleDelete();
                 break;
         }
     }
@@ -431,14 +438,14 @@ export default class ContextMenu {
                     : "";
                 title.textContent = songData.title;
                 subtitle.textContent = `by ${songData.artist}`;
-                urlInput.value = `${window.location.origin}/?song=${songData.id}`;
+                urlInput.value = `${window.location.origin}/?song=${songData.id}&album=${encodeURIComponent(songData.album || 'Unknown Album')}&artist=${encodeURIComponent(songData.artist)}`;
             } catch (error) {
                 console.error("Error getting song data:", error);
                 // Fallback to basic data - only if it's a numeric ID
                 if (/^\d+$/.test(this.currentSong.id)) {
                     title.textContent = this.currentSong.title;
                     subtitle.textContent = `by ${this.currentSong.artist}`;
-                    urlInput.value = `${window.location.origin}/?song=${this.currentSong.id}`;
+                    urlInput.value = `${window.location.origin}/?song=${this.currentSong.id}&album=${encodeURIComponent(this.currentSong.album || 'Unknown Album')}&artist=${encodeURIComponent(this.currentSong.artist)}`;
                 } else {
                     console.log(
                         "Invalid song ID format, cannot create share URL"
@@ -494,39 +501,68 @@ export default class ContextMenu {
 
     async editMetadata() {
         try {
-            const isAlbum =
-                this.currentElement &&
-                this.currentElement.dataset.type === "album";
-
+            const itemType = this.currentElement?.dataset.itemType || this.currentElement?.dataset.type || 'song';
+            const isAlbum = itemType === 'album';
+            const isArtist = itemType === 'artist';
+            
+            if (isArtist) {
+                // For artists, get artist data to edit artist metadata
+                const response = await this.api.getArtist(this.currentSong.id);
+                const artist = response.data?.artist || response.artist;
+                
+                if (artist) {
+                    // Convert artist data to song-like format for metadata editor
+                    const artistAsSong = {
+                        id: artist.id,
+                        title: artist.name,
+                        artist: artist.name,
+                        album: null,
+                        genre: null,
+                        year: null,
+                        track_number: null,
+                        cover_art_url: artist.cover_art_url || artist.image_url,
+                        bio: artist.bio,
+                        type: 'artist'
+                    };
+                    this.metadataEditor.show(artistAsSong, false, 'artist'); // third param indicates artist mode
+                } else {
+                    this.toast.show('Artist not found');
+                }
+                return;
+            }
+            
             if (isAlbum) {
-                // For albums, get first song to edit album metadata
+                // For albums, get songs from the album to edit album metadata
                 const albumTitle = this.currentSong.title;
                 const albumArtist = this.currentSong.artist;
-
-                const albumResponse = await this.api.getSongs(
-                    { search: albumTitle },
-                    1,
-                    1
-                );
-                const songs =
-                    albumResponse.data?.items || albumResponse.songs || [];
-                const firstSong = songs.find(
-                    (s) => s.album === albumTitle && s.artist === albumArtist
-                );
-
+                
+                const albumResponse = await this.api.getSongs({ 
+                    album: albumTitle,
+                    artist: albumArtist 
+                }, 1, 1);
+                
+                const songs = albumResponse.data?.items || [];
+                const firstSong = songs[0];
+                
                 if (firstSong) {
-                    this.metadataEditor.show(firstSong, true);
+                    this.metadataEditor.show(firstSong, true); // true indicates album editing mode
+                } else {
+                    this.toast.show('No songs found in this album');
                 }
             } else {
+                // For individual songs
                 const response = await this.api.getSong(this.currentSong.id);
-                const song = response.data?.song;
+                const song = response.data?.song || response.song;
+                
                 if (song) {
-                    this.metadataEditor.show(song, false);
+                    this.metadataEditor.show(song, false); // false indicates song editing mode
+                } else {
+                    this.toast.show('Song not found');
                 }
             }
         } catch (error) {
-            console.error("Failed to load song data:", error);
-            this.toast.show("Failed to load song data");
+            console.error('Failed to load metadata:', error);
+            this.toast.show('Failed to load metadata: ' + (error.message || 'Unknown error'));
         }
     }
 
@@ -727,6 +763,63 @@ export default class ContextMenu {
         } catch (error) {
             console.error("Failed to add to playlist:", error);
             this.toast.show("Failed to add to playlist");
+        }
+    }
+
+    async handleDelete() {
+        if (!this.currentSong) return;
+
+        const itemType = this.currentElement?.dataset.itemType || this.currentElement?.dataset.type || 'song';
+        const isAlbum = itemType === 'album';
+        const isArtist = itemType === 'artist';
+
+        let confirmMessage;
+        let deleteAction;
+
+        if (isArtist) {
+            confirmMessage = `Delete all content by "${this.currentSong.title}"? This will delete all albums and songs by this artist and cannot be undone.`;
+            deleteAction = () => this.api.deleteArtist(this.currentSong.id);
+        } else if (isAlbum) {
+            confirmMessage = `Delete album "${this.currentSong.title}" by ${this.currentSong.artist}? This will delete all songs in the album and cannot be undone.`;
+            deleteAction = () => this.api.deleteAlbum(this.currentSong.id);
+        } else {
+            confirmMessage = `Delete "${this.currentSong.title}" by ${this.currentSong.artist}? This cannot be undone.`;
+            deleteAction = () => this.api.deleteSong(this.currentSong.id);
+        }
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const result = await deleteAction();
+            
+            if (result.success) {
+                // Remove element from UI
+                if (this.currentElement) {
+                    this.currentElement.remove();
+                }
+                
+                // Show success message
+                if (isArtist) {
+                    this.toast.show(`Deleted artist and ${result.songsDeleted} songs`);
+                } else if (isAlbum) {
+                    this.toast.show(`Deleted album and ${result.songsDeleted} songs`);
+                } else {
+                    this.toast.show('Song deleted successfully');
+                }
+                
+                // Refresh content if needed
+                if (window.contentManager) {
+                    setTimeout(() => {
+                        window.contentManager.loadAllSongs();
+                        window.contentManager.renderHomeSections();
+                    }, 500);
+                }
+            }
+        } catch (error) {
+            console.error('Delete failed:', error);
+            this.toast.show(error.message || 'Delete failed');
         }
     }
 }

@@ -3,6 +3,7 @@
  */
 import { formatDuration } from "./utils/formatters.js";
 import URLManager from "./utils/urlManager.js";
+import Card from "./components/card.js";
 
 class ContentManager {
     constructor(api, toast) {
@@ -172,49 +173,9 @@ class ContentManager {
     // Render album grid using album data
     renderAlbumGrid(albums) {
         const container = document.getElementById("topAlbumsGrid");
-        if (!container) return;
-
-        container.innerHTML = "";
-
-        albums.forEach((album) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.dataset.albumId = album.id;
-            card.dataset.songId = album.id; // Use album ID as fallback for context menu
-            card.dataset.type = "album";
-            card.dataset.albumTitle = album.title || "Unknown Album";
-            card.dataset.artistName = album.artist || "Unknown Artist";
-
-            const artworkStyle = album.cover_art_url
-                ? `background: url(${album.cover_art_url}) center/cover no-repeat`
-                : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
-
-            const sanitizedTitle = this.sanitizeHTML(
-                album.title || "Unknown Album"
-            );
-            const sanitizedArtist = this.sanitizeHTML(
-                album.artist || "Unknown Artist"
-            );
-
-            card.innerHTML = `
-                <div class="card-image" style="${artworkStyle}"></div>
-                <div class="card-content">
-                    <div class="card-title">${sanitizedTitle}</div>
-                    <div class="card-subtitle">${sanitizedArtist}</div>
-                </div>
-                <button class="card-play">
-                    <img src="client/icons/play.svg" alt="Play" width="24" height="24">
-                </button>
-            `;
-
-            // Add album click handler
-            card.addEventListener("click", () => {
-                if (window.albumView) {
-                    window.albumView.show(album.title, album.artist, album.id);
-                }
-            });
-
-            container.appendChild(card);
+        Card.createCards(albums, 'album', container, {
+            sanitizeHTML: this.sanitizeHTML.bind(this),
+            context: 'home'
         });
     }
 
@@ -222,47 +183,19 @@ class ContentManager {
     renderRecentlyPlayedGrid(songs) {
         const container = document.getElementById("recentlyPlayedGrid");
         if (!container) return;
-
-        container.innerHTML = "";
-
-        songs.forEach((song, index) => {
-            // Preload first few images for better LCP
-            if (index < 3 && song.cover_art_url) {
+        
+        // Preload first few images for better LCP
+        songs.slice(0, 3).forEach(song => {
+            if (song.cover_art_url) {
                 const img = new Image();
                 img.src = song.cover_art_url;
             }
-            const card = document.createElement("div");
-            card.className = "card";
-            card.dataset.songId = song.id;
-            card.dataset.type = "song";
-            card.dataset.songTitle = song.title || "Unknown Title";
-            card.dataset.songArtist = song.artist || "Unknown Artist";
-            card.dataset.songAlbum = song.album || "Unknown Album";
-
-            const artworkStyle = song.cover_art_url
-                ? `background: url(${song.cover_art_url}) center/cover no-repeat`
-                : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
-
-            const sanitizedTitle = this.sanitizeHTML(
-                song.title || "Unknown Title"
-            );
-            const sanitizedArtist = this.sanitizeHTML(
-                song.artist || "Unknown Artist"
-            );
-
-            card.innerHTML = `
-                <div class="card-image" style="${artworkStyle}"></div>
-                <div class="card-content">
-                    <div class="card-title">${sanitizedTitle}</div>
-                    <div class="card-subtitle">${sanitizedArtist}</div>
-                </div>`;
-
-            // Add card click handler
-            card.addEventListener("click", () => {
-                this.playSong(song, "recently_played");
-            });
-
-            container.appendChild(card);
+        });
+        
+        Card.createCards(songs, 'song', container, {
+            sanitizeHTML: this.sanitizeHTML.bind(this),
+            context: 'recently_played',
+            showPlayButton: false
         });
     }
 
@@ -561,46 +494,9 @@ class ContentManager {
 
         // Render artist cards
         const container = document.getElementById(gridId);
-        container.innerHTML = "";
-
-        artistsData.artists.forEach((artist) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.dataset.itemId = artist.id; // Real database ID
-            card.dataset.itemType = "artist";
-            card.dataset.itemTitle = artist.name;
-            card.dataset.itemArtist = artist.name; // For consistency
-
-            const artworkStyle = artist.cover_art_url
-                ? `background: url(${artist.cover_art_url}) center/cover no-repeat`
-                : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
-
-            card.innerHTML = `
-                <div class="card-image" style="${artworkStyle}"></div>
-                <div class="card-content">
-                    <div class="card-title">${this.sanitizeHTML(
-                        artist.name
-                    )}</div>
-                    <div class="card-subtitle">${artist.albumCount} albums • ${
-                artist.songCount
-            } songs</div>
-                </div>
-                <button class="card-play">
-                    <img src="client/icons/play.svg" alt="Play" width="24" height="24">
-                </button>
-            `;
-
-            // Add click handler to show artist's albums
-            card.addEventListener("click", () => {
-                const username = context.includes("user_library")
-                    ? context.split("_")[1] + "_library"
-                    : "current_user";
-                this.showArtistAlbums(artist.id, artist.name, username);
-                // Update URL for artist
-                URLManager.setURL({ artist: artist.name });
-            });
-
-            container.appendChild(card);
+        Card.createCards(artistsData.artists, 'artist', container, {
+            sanitizeHTML: this.sanitizeHTML.bind(this),
+            context: context
         });
 
         // Setup pagination
@@ -689,50 +585,9 @@ class ContentManager {
 
         // Render album cards
         const container = document.getElementById("artistAlbumsGrid");
-        container.innerHTML = "";
-
-        albums.forEach((album) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.dataset.itemId = album.id; // Real database ID
-            card.dataset.itemType = "album";
-            card.dataset.itemTitle = album.title;
-            card.dataset.itemArtist = album.artist;
-            card.dataset.albumYear = album.year || "Unknown Year";
-            card.dataset.songCount = album.song_count;
-
-            const artworkStyle = album.cover_art_url
-                ? `background: url(${album.cover_art_url}) center/cover no-repeat`
-                : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
-
-            card.innerHTML = `
-                <div class="card-image" style="${artworkStyle}"></div>
-                <div class="card-content">
-                    <div class="card-title">${this.sanitizeHTML(
-                        album.title
-                    )}</div>
-                    <div class="card-subtitle">${
-                        album.year || "Unknown Year"
-                    } • ${album.song_count} songs</div>
-                </div>
-                <button class="card-play">
-                    <img src="client/icons/play.svg" alt="Play" width="24" height="24">
-                </button>
-            `;
-
-            // Add click handler to show album view
-            card.addEventListener("click", () => {
-                if (window.albumView) {
-                    window.albumView.show(album.title, album.artist);
-                    // Update URL for album
-                    URLManager.setURL({
-                        album: album.title,
-                        artist: album.artist,
-                    });
-                }
-            });
-
-            container.appendChild(card);
+        Card.createCards(albums, 'album', container, {
+            sanitizeHTML: this.sanitizeHTML.bind(this),
+            context: 'artist_albums'
         });
     }
 
@@ -1067,34 +922,9 @@ class ContentManager {
         const container = document.getElementById("albumsGrid");
         container.innerHTML = "";
 
-        albums.forEach((album) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.dataset.albumId = album.id;
-            card.dataset.songId = album.id;
-
-            const artworkStyle = album.cover_art_url
-                ? `background: url(${album.cover_art_url}) center/cover no-repeat`
-                : "background: linear-gradient(45deg, #8C67EF, #4F9EFF)";
-
-            card.innerHTML = `
-                <div class="card-image" style="${artworkStyle}"></div>
-                <div class="card-content">
-                    <div class="card-title">${album.title}</div>
-                    <div class="card-subtitle">${album.artist}</div>
-                </div>
-                <button class="card-play">
-                    <img src="client/icons/play.svg" alt="Play" width="24" height="24">
-                </button>
-            `;
-
-            card.addEventListener("click", () => {
-                if (window.albumView) {
-                    window.albumView.show(album.title, album.artist, album.id);
-                }
-            });
-
-            container.appendChild(card);
+        Card.createCards(albums, 'album', container, {
+            sanitizeHTML: this.sanitizeHTML.bind(this),
+            context: 'albums_section'
         });
 
         // Render pagination for albums

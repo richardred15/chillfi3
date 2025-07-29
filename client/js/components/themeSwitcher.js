@@ -120,12 +120,13 @@ class ThemeSwitcher {
                 img.src.includes("activity.svg") ||
                 img.src.includes("play.svg") ||
                 img.src.includes("share.svg") ||
-                img.src.includes("edit.svg")
+                img.src.includes("edit.svg") ||
+                img.src.includes("delete.svg")
             ) {
                 img.dataset.themeSvg = "true";
                 if (!img.dataset.originalSrc) {
                     // Only set originalSrc if current src is not a blob URL
-                    if (!img.src.startsWith('blob:')) {
+                    if (!img.src.startsWith("blob:")) {
                         img.dataset.originalSrc = img.src;
                     }
                 }
@@ -139,7 +140,7 @@ class ThemeSwitcher {
 
         for (const img of themedSvgImages) {
             const originalSrc = img.dataset.originalSrc;
-            
+
             // Skip if no original source
             if (!originalSrc) {
                 continue;
@@ -376,6 +377,7 @@ class ThemeSwitcher {
 
     // Setup DOM observer to watch for new SVGs
     setupDOMObserver() {
+        //return;
         this.observer = new MutationObserver((mutations) => {
             let hasNewSVGs = false;
 
@@ -415,7 +417,7 @@ class ThemeSwitcher {
         clearTimeout(this.updateTimeout);
         this.updateTimeout = setTimeout(() => {
             this.updateNewSVGs();
-        }, 100);
+        }, 200);
     }
 
     // Update only newly added SVGs
