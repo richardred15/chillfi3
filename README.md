@@ -22,6 +22,7 @@ A modern, self-hosted private music library with real-time streaming, social sha
 - PHP 8.0+
 - MySQL/MariaDB
 - Redis (for caching and session management)
+- **AWS S3 Bucket** (for audio files and artwork storage)
 - Web server (nginx/Apache)
 
 ### Installation
@@ -200,6 +201,70 @@ chillfi3/
 └── scripts/         # Deployment scripts
 ```
 
+## 🗄️ AWS S3 Bucket Setup
+
+ChillFi3 requires an AWS S3 bucket for storing audio files and artwork. The application automatically creates the necessary folder structure.
+
+### Required S3 Bucket Folders
+
+The following folders will be created automatically when files are uploaded:
+
+```
+your-bucket-name/
+├── songs/              # Audio files (MP3, FLAC, etc.)
+├── song_art/           # Individual song artwork
+├── album_art/          # Album artwork
+└── artist_images/      # Artist profile images
+```
+
+### S3 Bucket Configuration
+
+1. **Create an S3 bucket** in your preferred AWS region
+2. **Set bucket permissions** to allow your application access:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": {
+           "AWS": "arn:aws:iam::YOUR-ACCOUNT:user/YOUR-USER"
+         },
+         "Action": [
+           "s3:GetObject",
+           "s3:PutObject",
+           "s3:DeleteObject",
+           "s3:ListBucket"
+         ],
+         "Resource": [
+           "arn:aws:s3:::your-bucket-name",
+           "arn:aws:s3:::your-bucket-name/*"
+         ]
+       }
+     ]
+   }
+   ```
+3. **Configure CORS** for web access:
+   ```json
+   [
+     {
+       "AllowedHeaders": ["*"],
+       "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+       "AllowedOrigins": ["https://your-domain.com"],
+       "ExposeHeaders": ["ETag"]
+     }
+   ]
+   ```
+4. **Create IAM user** with programmatic access and attach the above policy
+5. **Note the Access Key ID and Secret Access Key** for your `.env` file
+
+### S3 Security Features
+
+- **Signed URLs**: All file access uses temporary signed URLs for security
+- **Hash-based naming**: Files are stored with SHA-256 hashes to prevent conflicts
+- **Automatic cleanup**: Deleted songs/albums remove associated S3 files
+- **Chunked uploads**: Large files are uploaded in chunks for reliability
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -217,10 +282,11 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password
 
-# AWS S3 (optional)
+# AWS S3 (required)
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 S3_BUCKET_NAME=your_bucket
+AWS_REGION=us-west-2
 
 # Server
 PORT=3005
@@ -236,6 +302,15 @@ LOG_FILE=logs/chillfi3.log
 APP_NAME=ChillFi3
 API_URL=https://your-domain.com/api
 ```
+
+### S3 Storage Costs
+
+**Estimated monthly costs for S3 storage:**
+- **1,000 songs** (~4GB): $0.10/month
+- **10,000 songs** (~40GB): $1.00/month  
+- **100,000 songs** (~400GB): $10.00/month
+
+*Costs include storage, requests, and data transfer. Actual costs may vary by region and usage patterns.*
 
 ## 🛠️ Development
 
