@@ -254,24 +254,19 @@ export default class UserMenu {
             // Show loading state
             this.toast.show('Uploading avatar...');
             
-            // Use the chunked image upload system
-            const uploadId = `avatar_${userId}_${Date.now()}`;
-            const response = await this.uploadImageInChunks(file, uploadId, 'profiles');
+            // Use HTTP upload instead of chunked Socket.IO
+            const response = await this.uploadImageHTTP(file, userId);
             
             if (response.success) {
-                // Update user profile with new image URL
-                const updateResponse = await window.api.updateUser(userId, { 
-                    profile_image_url: response.imageUrl 
-                });
+                this.updateAvatarDisplay(response.imageUrl);
+                this.toast.show('Avatar updated successfully');
                 
-                if (updateResponse.success) {
-                    this.updateAvatarDisplay(response.imageUrl);
-                    this.toast.show('Avatar updated successfully');
-                } else {
-                    this.toast.show('Failed to update profile');
+                // Update the user object in authManager
+                if (window.authManager?.user) {
+                    window.authManager.user.profile_image_url = response.imageUrl;
                 }
             } else {
-                this.toast.show(response.message || 'Failed to upload avatar');
+                this.toast.show('Failed to upload avatar: ' + (response.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('Avatar upload error:', error);
@@ -279,46 +274,26 @@ export default class UserMenu {
         }
     }
     
-    async uploadImageInChunks(file, uploadId, folder = 'profiles') {
-        const CHUNK_SIZE = 64 * 1024; // 64KB chunks
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    // HTTP image upload (unified approach)
+    async uploadImageHTTP(file, userId) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('userId', userId);
         
-        try {
-            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-                const start = chunkIndex * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, file.size);
-                const chunk = file.slice(start, end);
-                
-                // Convert chunk to base64
-                const chunkData = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(chunk);
-                });
-                
-                const response = await window.api.uploadImageChunk({
-                    uploadId,
-                    chunkIndex,
-                    totalChunks,
-                    data: chunkData,
-                    filename: `${folder}/${uploadId}.${file.name.split('.').pop()}`,
-                    mimeType: file.type
-                });
-                
-                if (!response.success) {
-                    throw new Error(response.message || 'Chunk upload failed');
-                }
-                
-                // Return final response if this was the last chunk
-                if (response.imageUrl) {
-                    return response;
-                }
-            }
-        } catch (error) {
-            console.error('Chunked upload error:', error);
-            throw error;
-        }
+        const token = localStorage.getItem('chillfi_token');
+        
+        const response = await fetch('/api/upload/profile-image', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        return await response.json();
     }
+    
+
     
     updateAvatarDisplay(imageUrl) {
         const avatars = document.querySelectorAll('.profile-avatar, .user-avatar');

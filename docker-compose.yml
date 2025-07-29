@@ -13,6 +13,7 @@ services:
       - ./server/.env:/app/server/.env
     depends_on:
       - db
+      - redis
     restart: unless-stopped
 
   db:
@@ -24,10 +25,18 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-dev_password_change_in_production}
     volumes:
       - db_data:/var/lib/mysql
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
 volumes:
   db_data:
+  redis_data:

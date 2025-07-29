@@ -17,94 +17,109 @@ A modern, self-hosted private music library with real-time streaming, social sha
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+
-- PHP 8.0+
-- MySQL/MariaDB
-- Redis (for caching and session management)
-- **AWS S3 Bucket** (for audio files and artwork storage)
-- Web server (nginx/Apache)
+### Docker Installation (Recommended)
+```bash
+# Clone and run automated installer
+git clone https://github.com/richardred15/chillfi3.git
+cd chillfi3
+chmod +x install-docker.sh
+./install-docker.sh
+```
 
-### Installation
+The installer guides you through:
+- AWS S3 bucket configuration
+- Database and Redis setup
+- Admin user creation
+- Service deployment
 
-1. **Clone the repository**
+### Manual Installation
+
+**Prerequisites:**
+- Node.js 18+, PHP 8.0+, MySQL/MariaDB, Redis
+- **AWS S3 Bucket** (required for file storage)
+
+1. **Clone and install**
 ```bash
 git clone https://github.com/richardred15/chillfi3.git
 cd chillfi3
+cd server && npm install
 ```
 
-2. **Install dependencies**
+2. **Configure environment**
 ```bash
-cd server
-npm install
-```
-
-3. **Configure environment**
-```bash
-# Server configuration
 cp server/.env.example server/.env
-# Edit server/.env with your database and AWS credentials
-
-# Client configuration  
 cp .env.client.example .env.client
-# Edit .env.client with your API URL and app name
+# Edit files with your AWS S3 credentials and database settings
 ```
 
-4. **Start the server**
+3. **Start services**
 ```bash
-cd server
-npm start
-# Database will be created automatically on first run
+cd server && npm start
+# Database schema created automatically
 ```
 
-5. **Create admin user**
-In the server console, create your first admin user:
+4. **Create admin user**
 ```bash
-# In the server console (where npm start is running)
+# In server console
 create-admin admin your_password
 ```
 
-6. **Access the application**
-Open http://localhost:3005 in your browser and login with your admin credentials.
+5. **Access application**
+Open http://localhost:3005 and login with admin credentials.
 
 ## 🐳 Docker Deployment
 
-### Quick Start with Docker
+### Automated Installation (Recommended)
 ```bash
+# Clone repository
+git clone https://github.com/richardred15/chillfi3.git
+cd chillfi3
+
+# Run interactive installer
+chmod +x install-docker.sh
+./install-docker.sh
+```
+
+The installer will:
+- Install Docker and Docker Compose
+- Guide you through configuration (AWS S3, database, admin user)
+- Build and start all services (app, database, Redis)
+- Create your admin user automatically
+
+### Manual Docker Setup
+```bash
+# Install Docker
+sudo apt update && sudo apt install -y docker.io docker-compose
+sudo usermod -aG docker $USER && newgrp docker
+
 # Configure environment files
 cp server/.env.example server/.env
 cp .env.client.example .env.client
-# Edit the .env files with your settings
+# Edit the .env files with your AWS S3 credentials
 
-# Build and run
-docker build -t chillfi3 .
+# Start services
 docker-compose up -d
+
+# Create admin user
+echo "create-admin admin your_password" | docker-compose exec -T app sh -c "cd /app/server && node server.js"
 ```
 
 ### Production Deployment
 ```bash
 # Setup production secrets
-cp secrets/db_root_password.txt.example secrets/db_root_password.txt
-cp secrets/db_password.txt.example secrets/db_password.txt
-# Edit secrets with secure passwords
+mkdir -p secrets
+echo "your_root_password" > secrets/db_root_password.txt
+echo "your_db_password" > secrets/db_password.txt
 
-# Deploy
+# Deploy with production config
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Manual Docker
-```bash
-# Setup environment
-cp server/.env.example server/.env
-cp .env.client.example .env.client
-
-# Build and run
-docker build -t chillfi3 .
-docker-compose up -d
-```
-
-### Database Setup
-The database schema is automatically created when the server starts. Simply ensure your database credentials are correct in the `.env` files.
+### Docker Services
+The Docker setup includes:
+- **App**: ChillFi3 server (Node.js + PHP + Nginx)
+- **Database**: MariaDB for metadata storage
+- **Redis**: Caching and session management
 
 ## 🔒 HTTPS Setup
 
@@ -324,8 +339,14 @@ npm run dev
 cd server
 npm test
 
-# Build for production
-docker build -t chillfi3 .
+# Docker development
+docker-compose up -d
+docker-compose logs -f
+
+# Docker management
+docker-compose down          # Stop services
+docker-compose build         # Rebuild after changes
+docker-compose restart app   # Restart app service
 ```
 
 ## 📖 API Documentation

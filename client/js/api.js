@@ -223,6 +223,10 @@ class API {
     async uploadAvatar(userId, imageFile) {
         return await this.emit("user:uploadAvatar", { userId, imageFile });
     }
+    
+    async updateUserAvatar(userId, imageUrl) {
+        return await this.emit("user:updateAvatar", { userId, imageUrl });
+    }
 
     async getUserStats(userId) {
         return await this.emit("user:getStats", { userId });

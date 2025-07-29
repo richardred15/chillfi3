@@ -213,26 +213,68 @@ async function processImageChunk(
         throw new Error('Invalid upload session');
     }
 
-    // Store chunk (remove data URL prefix)
-    const base64Data = chunkData.split(',')[1] || chunkData;
+    // Store chunk (remove data URL prefix and clean base64)
+    let base64Data = chunkData.split(',')[1] || chunkData;
+    // Remove any whitespace or invalid base64 characters
+    base64Data = base64Data.replace(/[^A-Za-z0-9+/=]/g, '');
+    console.log(`Chunk ${chunkIndex} data length: ${base64Data.length} characters`);
+    
     if (session.chunks[chunkIndex] === undefined) {
         session.chunks[chunkIndex] = base64Data;
         session.receivedCount++;
+        console.log(`Stored chunk ${chunkIndex}, received count: ${session.receivedCount}/${totalChunks}`);
     }
 
     // Check if all chunks received
     if (session.receivedCount === totalChunks) {
+        console.log(`All ${totalChunks} chunks received, combining...`);
+        console.log('Chunks array length:', session.chunks.length);
+        console.log('Chunks filled:', session.chunks.filter(chunk => chunk !== undefined).length);
+        
+        // Check for missing chunks
+        const missingChunks = [];
+        for (let i = 0; i < totalChunks; i++) {
+            if (session.chunks[i] === undefined) {
+                missingChunks.push(i);
+            }
+        }
+        if (missingChunks.length > 0) {
+            console.log('Missing chunks:', missingChunks);
+        }
+        
         // Combine all chunks
         const combinedData = session.chunks.join('');
+        console.log('Individual chunk lengths:', session.chunks.map(chunk => chunk ? chunk.length : 'undefined'));
+        console.log('Combined data length:', combinedData.length);
+        
+        // Validate base64 before decoding
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Regex.test(combinedData)) {
+            console.log('Invalid base64 data detected, cleaning...');
+            const cleanedData = combinedData.replace(/[^A-Za-z0-9+/=]/g, '');
+            console.log('Cleaned data length:', cleanedData.length);
+        }
+        
         const imageBuffer = Buffer.from(combinedData, 'base64');
+        console.log('Buffer size after base64 decode:', imageBuffer.length);
+        console.log('Expected buffer size (75% of base64):', Math.floor(combinedData.length * 0.75));
 
-        // Generate unique filename
+        // Generate unique filename based on uploadId prefix
         const fileHash = crypto
             .createHash('sha256')
             .update(imageBuffer)
             .digest('hex');
         const fileExtension = filename.split('.').pop() || 'jpg';
-        const s3FileName = `album_art/${fileHash}.${fileExtension}`;
+        
+        // Determine folder based on uploadId content
+        let folder = 'album_art';
+        if (uploadId.includes('_avatar_')) {
+            folder = 'profiles';
+        } else if (uploadId.includes('_artist_')) {
+            folder = 'artist_images';
+        }
+        
+        const s3FileName = `${folder}/${fileHash}.${fileExtension}`;
 
         // Upload to S3
         const uploadCommand = new PutObjectCommand({
@@ -320,9 +362,30 @@ function getActiveUploads() {
     return activeUploads;
 }
 
+// Upload image via HTTP (unified approach)
+async function uploadImage(file, folder = 'album_art') {
+    const fileHash = crypto
+        .createHash('sha256')
+        .update(file.buffer)
+        .digest('hex');
+    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const s3FileName = `${folder}/${fileHash}.${fileExtension}`;
+
+    const uploadCommand = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3FileName,
+        Body: file.buffer,
+        ContentType: file.mimetype || 'image/jpeg',
+    });
+
+    await s3Client.send(uploadCommand);
+    return `https://${BUCKET_NAME}.s3.${config.aws.region}.amazonaws.com/${s3FileName}`;
+}
+
 module.exports = {
     processImageChunk,
     processFile,
+    uploadImage,
     imageUploadSessions,
     generateSecureUrl,
     cleanup,

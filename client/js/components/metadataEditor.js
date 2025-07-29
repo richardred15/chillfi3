@@ -270,8 +270,8 @@ class MetadataEditor {
                 const dataUrl = await this.fileToDataUrl(file);
                 preview.dataset.newArt = dataUrl;
             } else {
-                // Large file - use chunked upload
-                const imageUrl = await this.uploadImageChunked(file);
+                // Large file - use HTTP upload
+                const imageUrl = await this.uploadImageHTTP(file);
                 preview.dataset.newArtUrl = imageUrl;
             }
         } catch (error) {
@@ -290,37 +290,27 @@ class MetadataEditor {
         });
     }
     
-    // Upload image in chunks
-    async uploadImageChunked(file) {
-        const CHUNK_SIZE = 512 * 1024; // 512KB chunks
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        const uploadId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // Upload image via HTTP
+    async uploadImageHTTP(file) {
+        const formData = new FormData();
+        formData.append('image', file);
         
-        let imageUrl = null;
+        const token = localStorage.getItem('chillfi_token');
         
-        for (let i = 0; i < totalChunks; i++) {
-            const start = i * CHUNK_SIZE;
-            const end = Math.min(start + CHUNK_SIZE, file.size);
-            const chunk = file.slice(start, end);
-            
-            const chunkData = await this.fileToDataUrl(chunk);
-            
-            const response = await this.api.uploadImageChunk({
-                uploadId,
-                chunkIndex: i,
-                totalChunks,
-                data: chunkData,
-                filename: file.name,
-                mimeType: file.type
-            });
-            
-            // Last chunk returns the image URL
-            if (response.imageUrl) {
-                imageUrl = response.imageUrl;
-            }
+        const response = await fetch('/api/upload/album-art', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Upload failed');
         }
         
-        return imageUrl;
+        return result.imageUrl;
     }
 }
 

@@ -288,6 +288,60 @@ function handleSocket(socket, _io) {
         }
     });
     
+    // Update user avatar (called after chunked upload)
+    socket.on('user:updateAvatar', async (data) => {
+        try {
+            if (!socket.authenticated) {
+                return socket.emit('user:updateAvatar', { 
+                    success: false, 
+                    message: 'Authentication required' 
+                });
+            }
+            
+            const { userId, imageUrl } = data;
+            
+            // Check permissions
+            if (socket.user.id !== userId && !socket.user.is_admin) {
+                return socket.emit('user:updateAvatar', { 
+                    success: false, 
+                    message: 'Unauthorized' 
+                });
+            }
+            
+            if (!imageUrl) {
+                return socket.emit('user:updateAvatar', { 
+                    success: false, 
+                    message: 'Image URL required' 
+                });
+            }
+            
+            console.log('Updating user avatar in database:', { userId, imageUrl });
+            
+            // Update user profile
+            await database.query(
+                'UPDATE users SET profile_image_url = ? WHERE id = ?',
+                [imageUrl, userId]
+            );
+            
+            // Generate secure URL for response
+            const secureUrl = await secureProfileImage(imageUrl);
+            
+            socket.emit('user:updateAvatar', {
+                success: true,
+                profileImageUrl: secureUrl
+            });
+            
+            console.log('Avatar updated successfully in database');
+            
+        } catch (error) {
+            console.error('Update avatar error:', error);
+            socket.emit('user:updateAvatar', { 
+                success: false, 
+                message: 'Failed to update avatar: ' + error.message 
+            });
+        }
+    });
+    
     // Get user stats
     socket.on('user:getStats', async (data) => {
         try {
