@@ -12,13 +12,18 @@ jobs:
     
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: musiclib_test
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - uses: actions/checkout@v4
@@ -55,6 +60,11 @@ jobs:
         fi
         echo 'MySQL is up - executing command'
     
+    - name: Verify MySQL connection
+      run: |
+        mysql -h127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
+        echo "MySQL is ready - database will be created by our code"
+    
     - name: Run stable tests with coverage
       run: |
         cd server
@@ -66,6 +76,12 @@ jobs:
         DB_PASSWORD: root
         DB_NAME: musiclib_test
         JWT_SECRET: test_secret_key_for_testing
+        AWS_ACCESS_KEY_ID: test_key
+        AWS_SECRET_ACCESS_KEY: test_secret
+        S3_BUCKET_NAME: test-bucket
+        AWS_REGION: us-west-2
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
         LOG_LEVEL: ERROR
     
     - name: Run integration tests
@@ -79,6 +95,12 @@ jobs:
         DB_PASSWORD: root
         DB_NAME: musiclib_test
         JWT_SECRET: test_secret_key_for_testing
+        AWS_ACCESS_KEY_ID: test_key
+        AWS_SECRET_ACCESS_KEY: test_secret
+        S3_BUCKET_NAME: test-bucket
+        AWS_REGION: us-west-2
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
         LOG_LEVEL: ERROR
     
 
