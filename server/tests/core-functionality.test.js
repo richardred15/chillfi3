@@ -51,14 +51,14 @@ describe('Core Functionality', () => {
     });
 
     describe('Rate Limiter', () => {
-        test('should allow requests within limits', () => {
+        test('should allow requests within limits', async () => {
             const rateLimiter = require('../middleware/rateLimiter');
             const mockSocket = {
                 handshake: { address: '127.0.0.1' },
                 user: { id: 1 }
             };
             
-            const result = rateLimiter(mockSocket, 'test:event');
+            const result = await rateLimiter(mockSocket, 'test:event');
             expect(result).toBe(true);
         });
     });
