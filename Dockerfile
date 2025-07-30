@@ -51,6 +51,7 @@ EXPOSE 80 3005
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Waiting for database..."' >> /app/start.sh && \
     echo 'sleep 10' >> /app/start.sh && \
+    echo 'chown -R www-data:www-data /app/server/storage' >> /app/start.sh && \
     echo 'cd /app/server' >> /app/start.sh && \
     echo 'echo "setup-database" | timeout 30 node server.js || echo "Database setup completed or already exists"' >> /app/start.sh && \
     echo 'supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /app/start.sh && \

@@ -33,8 +33,10 @@ class API {
             }
 
             // Use environment-based protocol detection instead of hostname
-            const useHttps = window.APP_ENV === 'production' || window.FORCE_HTTPS === 'true';
-            const protocol = useHttps ? 'https' : 'http';
+            const useHttps =
+                window.APP_ENV === "production" ||
+                window.FORCE_HTTPS === "true";
+            const protocol = useHttps ? "https" : "http";
             const serverUrl = `${protocol}://${window.location.hostname}:3005`;
 
             this.socket = io(serverUrl, {
@@ -109,10 +111,10 @@ class API {
                 if (data.requestId && response.requestId !== data.requestId) {
                     return; // Ignore responses that don't match our request ID
                 }
-                
+
                 this.socket.off(event, responseHandler);
                 clearTimeout(timeout);
-                
+
                 if (response === undefined || response === null) {
                     reject(new Error("No response from server"));
                 } else if (response.success === false) {
@@ -223,7 +225,7 @@ class API {
     async uploadAvatar(userId, imageFile) {
         return await this.emit("user:uploadAvatar", { userId, imageFile });
     }
-    
+
     async updateUserAvatar(userId, imageUrl) {
         return await this.emit("user:updateAvatar", { userId, imageUrl });
     }
@@ -453,7 +455,7 @@ class API {
     // Get albums by artist
     async getAlbumsByArtist(artistId, page = 1, limit = 24) {
         const requestId = `artist_${artistId}_${Date.now()}`;
-        return this.emit('albums:list', { artistId, page, limit, requestId });
+        return this.emit("albums:list", { artistId, page, limit, requestId });
     }
 
     // Get album by ID
@@ -560,8 +562,6 @@ class API {
     async getVersion() {
         return await this.emit("version:get", {});
     }
-
-
 
     // Check if file hash already exists
     async checkFileHash(hash) {

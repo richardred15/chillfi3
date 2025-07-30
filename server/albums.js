@@ -1,34 +1,34 @@
 /**
  * Albums Module - Handles album-related operations
  */
-const database = require('./database');
-const logger = require('./utils/logger');
-const { success, error } = require('./utils/response');
-const rateLimiter = require('./middleware/rateLimiter');
-const { secureImageUrl } = require('./utils/s3Utils');
+const database = require("./database");
+const logger = require("./utils/logger");
+const { success, error } = require("./utils/response");
+const rateLimiter = require("./middleware/rateLimiter");
+const { secureImageUrl } = require("./utils/s3Utils");
 
 // Handle socket events
 function handleSocket(socket, _io) {
     // List albums
-    socket.on('albums:list', async (data) => {
+    socket.on("albums:list", async (data) => {
         try {
-            if (!(await rateLimiter(socket, 'albums:list'))) {
-                return error(socket, 'albums:list', 'Rate limit exceeded');
+            if (!(await rateLimiter(socket, "albums:list"))) {
+                return error(socket, "albums:list", "Rate limit exceeded");
             }
 
             if (!socket.authenticated) {
-                return error(socket, 'albums:list', 'Authentication required');
+                return error(socket, "albums:list", "Authentication required");
             }
 
             const { page = 1, limit = 24, artistId, requestId } = data;
             const offset = (page - 1) * limit;
 
-            let whereClause = '1=1';
+            let whereClause = "1=1";
             let queryParams = [];
 
             // Filter by artist if provided
             if (artistId) {
-                whereClause += ' AND al.artist_id = ?';
+                whereClause += " AND al.artist_id = ?";
                 queryParams.push(artistId);
             }
 
@@ -76,35 +76,34 @@ function handleSocket(socket, _io) {
                         total: totalCount.count,
                         page: parseInt(page),
                         limit: parseInt(limit),
-                        totalPages: Math.ceil(totalCount.count / limit) || 1
-                    }
+                        totalPages: Math.ceil(totalCount.count / limit) || 1,
+                    },
                 },
                 timestamp: new Date().toISOString(),
-                requestId
+                requestId,
             };
-            
 
-            socket.emit('albums:list', response);
+            socket.emit("albums:list", response);
         } catch (err) {
-            logger.error('List albums error', {
+            logger.error("List albums error", {
                 error: err.message,
                 userId: socket.user?.id,
             });
-            error(socket, 'albums:list', 'Failed to get albums');
+            error(socket, "albums:list", "Failed to get albums - albums.js");
         }
     });
 
     // Get album by ID
-    socket.on('albums:get', async (data) => {
+    socket.on("albums:get", async (data) => {
         try {
             if (!socket.authenticated) {
-                return error(socket, 'albums:get', 'Authentication required');
+                return error(socket, "albums:get", "Authentication required");
             }
 
             const { albumId } = data;
 
             if (!albumId) {
-                return error(socket, 'albums:get', 'Album ID required');
+                return error(socket, "albums:get", "Album ID required");
             }
 
             const albums = await database.query(
@@ -122,7 +121,7 @@ function handleSocket(socket, _io) {
             );
 
             if (albums.length === 0) {
-                return error(socket, 'albums:get', 'Album not found');
+                return error(socket, "albums:get", "Album not found");
             }
 
             const album = albums[0];
@@ -132,14 +131,14 @@ function handleSocket(socket, _io) {
                 album.cover_art_url = await secureImageUrl(album.cover_art_url);
             }
 
-            success(socket, 'albums:get', { album });
+            success(socket, "albums:get", { album });
         } catch (err) {
-            logger.error('Get album error', {
+            logger.error("Get album error", {
                 error: err.message,
                 albumId: data.albumId,
                 userId: socket.user?.id,
             });
-            error(socket, 'albums:get', 'Failed to get album');
+            error(socket, "albums:get", "Failed to get album");
         }
     });
 }
