@@ -67,9 +67,11 @@ fi
 
 # Check Docker permissions
 if ! docker ps &>/dev/null; then
-    print_warning "Docker permissions not active. Activating docker group..."
-    print_status "Running 'newgrp docker' to activate permissions"
-    exec newgrp docker "$0" "$@"
+    print_warning "Docker permissions not active. Please run the following commands:"
+    print_status "sudo usermod -aG docker $USER"
+    print_status "newgrp docker"
+    print_status "Then run this script again: ./install-docker.sh"
+    exit 1
 fi
 
 if command -v docker-compose &> /dev/null; then
