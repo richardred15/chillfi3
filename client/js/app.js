@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 .then((versionResponse) => {
                     console.log("Server version:", versionResponse.version);
 
-                    const updateServiceWorker = () => {
+                    /* const updateServiceWorker = () => {
                         if (
                             "serviceWorker" in navigator &&
                             navigator.serviceWorker.controller
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                         updateServiceWorker();
                     } else {
                         navigator.serviceWorker.ready.then(updateServiceWorker);
-                    }
+                    } */
                 })
                 .catch((error) => {
                     console.error("Failed to get version:", error);
