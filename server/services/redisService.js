@@ -1,9 +1,9 @@
 /**
  * Redis Service for Caching and Sessions
  */
-const redis = require('redis');
+const redis = require("redis");
 // const config = require('../config');
-const logger = require('../utils/logger');
+const logger = require("../utils/logger");
 
 class RedisService {
     constructor() {
@@ -14,27 +14,33 @@ class RedisService {
     async connect() {
         try {
             this.client = redis.createClient({
-                host: process.env.REDIS_HOST || 'localhost',
-                port: process.env.REDIS_PORT || 6379,
-                password: process.env.REDIS_PASSWORD || undefined,
+                host: process.env.REDIS_HOST,
+                port: process.env.REDIS_PORT,
+                password: process.env.REDIS_PASSWORD,
                 retryDelayOnFailover: 100,
-                maxRetriesPerRequest: 3
+                maxRetriesPerRequest: 3,
             });
 
-            this.client.on('error', (err) => {
-                logger.error('Redis connection error', { error: err.message });
+            this.client.on("error", (err) => {
+                logger.error("Redis connection error", {
+                    error: `${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+                    message: err.message,
+                });
+                logger.error("Redis connection error", { error: err.message });
                 this.connected = false;
             });
 
-            this.client.on('connect', () => {
-                logger.info('Redis connected successfully');
+            this.client.on("connect", () => {
+                logger.info("Redis connected successfully");
                 this.connected = true;
             });
 
             await this.client.connect();
             return true;
         } catch (error) {
-            logger.warn('Redis connection failed, continuing without cache', { error: error.message });
+            logger.warn("Redis connection failed, continuing without cache", {
+                error: error.message,
+            });
             this.connected = false;
             return false;
         }
@@ -44,7 +50,7 @@ class RedisService {
         if (this.client && this.connected) {
             await this.client.disconnect();
             this.connected = false;
-            logger.info('Redis disconnected');
+            logger.info("Redis disconnected");
         }
     }
 
@@ -54,7 +60,7 @@ class RedisService {
         try {
             return await this.client.get(key);
         } catch (error) {
-            logger.error('Redis get error', { key, error: error.message });
+            logger.error("Redis get error", { key, error: error.message });
             return null;
         }
     }
@@ -65,7 +71,7 @@ class RedisService {
             await this.client.setEx(key, ttl, value);
             return true;
         } catch (error) {
-            logger.error('Redis set error', { key, error: error.message });
+            logger.error("Redis set error", { key, error: error.message });
             return false;
         }
     }
@@ -76,7 +82,7 @@ class RedisService {
             await this.client.del(key);
             return true;
         } catch (error) {
-            logger.error('Redis del error', { key, error: error.message });
+            logger.error("Redis del error", { key, error: error.message });
             return false;
         }
     }
@@ -84,7 +90,7 @@ class RedisService {
     // Rate limiting
     async checkRateLimit(key, limit, window) {
         if (!this.connected) return true; // Allow if Redis unavailable
-        
+
         try {
             const current = await this.client.incr(key);
             if (current === 1) {
@@ -92,7 +98,10 @@ class RedisService {
             }
             return current <= limit;
         } catch (error) {
-            logger.error('Redis rate limit error', { key, error: error.message });
+            logger.error("Redis rate limit error", {
+                key,
+                error: error.message,
+            });
             return true; // Allow on error
         }
     }
@@ -104,7 +113,11 @@ class RedisService {
     }
 
     async setSession(sessionId, data, ttl = 86400) {
-        return await this.set(`session:${sessionId}`, JSON.stringify(data), ttl);
+        return await this.set(
+            `session:${sessionId}`,
+            JSON.stringify(data),
+            ttl
+        );
     }
 
     async deleteSession(sessionId) {
@@ -120,10 +133,10 @@ class RedisService {
         if (!this.connected) return false;
         try {
             await this.client.flushAll();
-            logger.info('Redis cache cleared');
+            logger.info("Redis cache cleared");
             return true;
         } catch (error) {
-            logger.error('Redis flush error', { error: error.message });
+            logger.error("Redis flush error", { error: error.message });
             return false;
         }
     }
