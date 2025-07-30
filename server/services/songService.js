@@ -2,7 +2,7 @@
  * Song Service
  */
 const database = require('../database');
-const { extractS3Key, generateSecureUrl, secureImageUrl } = require('../utils/s3Utils');
+const storageService = require('./storageService');
 
 async function getSongs(filters = {}, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
@@ -74,14 +74,13 @@ async function getSongs(filters = {}, page = 1, limit = 20) {
         queryParams
     );
 
-    // Secure URLs and generate play URLs
+    // Generate URLs
     for (const song of songs) {
         if (song.cover_art_url) {
-            song.cover_art_url = await secureImageUrl(song.cover_art_url);
+            song.cover_art_url = await storageService.generateUrl(song.cover_art_url);
         }
         if (song.file_path) {
-            const audioKey = extractS3Key(song.file_path);
-            song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
+            song.play_url = await storageService.generateUrl(song.file_path);
         }
     }
 
@@ -127,12 +126,12 @@ async function getSongById(songId) {
     
     const song = songs[0];
     
-    // Secure URLs
+    // Generate URLs
     if (song.album_artwork) {
-        song.album_artwork = await secureImageUrl(song.album_artwork);
+        song.album_artwork = await storageService.generateUrl(song.album_artwork);
     }
     if (song.cover_art_url) {
-        song.cover_art_url = await secureImageUrl(song.cover_art_url);
+        song.cover_art_url = await storageService.generateUrl(song.cover_art_url);
     }
     
     return song;
