@@ -2,7 +2,7 @@
  * Universal Card Component
  * Handles rendering of song, album, and artist cards with consistent styling and behavior
  */
-import URLManager from '../utils/urlManager.js';
+import URLManager from "../utils/urlManager.js";
 
 export default class Card {
     constructor(item, type, options = {}) {
