@@ -24,7 +24,6 @@ class RedisService {
             this.client.on("error", (err) => {
                 logger.error("Redis connection error", {
                     error: `${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-                    message: err.message,
                 });
                 logger.error("Redis connection error", { error: err.message });
                 this.connected = false;
