@@ -30,9 +30,20 @@ class S3StorageProvider {
     }
 
     async generateUrl(key, expiresIn = 900) {
+        // Extract key from full URL if needed
+        let s3Key = key;
+        if (key && key.startsWith('http')) {
+            // Extract key from full S3 URL
+            const urlParts = key.split('/');
+            const bucketIndex = urlParts.findIndex(part => part.includes('.s3.') || part.includes('amazonaws.com'));
+            if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+                s3Key = urlParts.slice(bucketIndex + 1).join('/');
+            }
+        }
+        
         const command = new GetObjectCommand({
             Bucket: this.bucketName,
-            Key: key
+            Key: s3Key
         });
         
         return await getSignedUrl(this.client, command, { expiresIn });
