@@ -18,8 +18,8 @@ const rateLimiter = require('./middleware/rateLimiter');
 const uploadService = require('./services/uploadService');
 const songService = require('./services/songService');
 const deletionService = require('./services/deletionService');
-const { generateSecureUrl } = uploadService;
-const { extractS3Key, secureImageUrl } = require('./utils/s3Utils');
+const storageService = require('./services/storageService');
+const { extractS3Key } = require('./utils/s3Utils');
 
 // const s3Client = new S3Client({
 //     region: config.aws.region,
@@ -30,8 +30,7 @@ const { extractS3Key, secureImageUrl } = require('./utils/s3Utils');
 // });
 // const BUCKET_NAME = config.aws.s3Bucket;
 
-// Get upload sessions from uploadService
-const { imageUploadSessions } = uploadService;
+
 
 // Handle socket events
 function handleSocket(socket, _io) {
@@ -95,98 +94,7 @@ function handleSocket(socket, _io) {
         }
     });
 
-    // Initialize upload session
-    socket.on('song:uploadInit', async (data) => {
-        try {
-            if (!(await rateLimiter(socket, 'song:upload'))) {
-                return error(socket, 'song:uploadInit', 'Rate limit exceeded');
-            }
 
-            if (!socket.authenticated) {
-                return error(
-                    socket,
-                    'song:uploadInit',
-                    'Authentication required'
-                );
-            }
-
-            const { fileCount, totalSize } = data;
-            const uploadId = await uploadService.initializeUpload(
-                socket.user.id,
-                fileCount,
-                totalSize
-            );
-
-            success(socket, 'song:uploadInit', { uploadId });
-        } catch (err) {
-            logger.error('Upload init error', { error: err.message, userId: socket.user?.id });
-            error(socket, 'song:uploadInit', 'Failed to initialize upload');
-        }
-    });
-
-    // Upload song chunk
-    socket.on('song:uploadChunk', async (data) => {
-        try {
-            if (!socket.authenticated) {
-                return error(
-                    socket,
-                    'song:uploadChunk',
-                    'Authentication required'
-                );
-            }
-
-            const { uploadId, fileIndex, chunk, metadata } = data;
-
-            if (!uploadId) {
-                return error(socket, 'song:uploadChunk', 'Upload ID required');
-            }
-
-            const songId = await uploadService.processChunk(
-                uploadId,
-                fileIndex,
-                chunk,
-                metadata,
-                socket.user.id
-            );
-
-            success(socket, 'song:uploadChunk', songId ? { songId } : null);
-        } catch (err) {
-            logger.error('Chunk upload error', { error: err.message, uploadId: data.uploadId, userId: socket.user?.id });
-            error(
-                socket,
-                'song:uploadChunk',
-                err.message || 'Chunk upload failed'
-            );
-        }
-    });
-
-    // Legacy upload handler removed - using chunked upload only
-
-    // Upload control
-    socket.on('song:uploadControl', async (data) => {
-        try {
-            if (!socket.authenticated) {
-                return socket.emit('song:uploadControl', {
-                    success: false,
-                    message: 'Authentication required',
-                });
-            }
-
-            const { uploadId, action } = data;
-
-            if (action === 'cancel') {
-                uploadService.cancelUpload(uploadId, socket.user.id);
-            }
-
-            socket.emit('song:uploadControl', { success: true });
-        } catch (error) {
-            console.error('Upload control error:', error);
-            socket.emit('song:uploadControl', {
-                success: false,
-                message: 'Upload control failed',
-            });
-        }
-    });
 
     // Update album
     socket.on('album:update', async (data) => {
@@ -399,8 +307,7 @@ function handleSocket(socket, _io) {
             }
 
             const song = songs[0];
-            const audioKey = extractS3Key(song.file_path);
-            const secureAudioUrl = audioKey ? await generateSecureUrl(audioKey) : song.file_path;
+            const secureAudioUrl = await storageService.generateUrl(song.file_path);
 
             socket.emit('song:play', {
                 url: secureAudioUrl,
@@ -482,61 +389,7 @@ function handleSocket(socket, _io) {
         }
     });
 
-    // Upload image chunk
-    socket.on('song:uploadImageChunk', async (data) => {
-        try {
-            if (!socket.authenticated) {
-                return socket.emit('song:uploadImageChunk', {
-                    success: false,
-                    message: 'Authentication required',
-                });
-            }
 
-            const {
-                uploadId,
-                chunkIndex,
-                totalChunks,
-                data: chunkData,
-                filename,
-                mimeType,
-            } = data;
-
-            // Use uploadService for image uploads too
-            const imageUrl = await uploadService.processImageChunk(
-                uploadId,
-                chunkIndex,
-                totalChunks,
-                chunkData,
-                filename,
-                mimeType,
-                socket.user.id
-            );
-
-            if (imageUrl) {
-                socket.emit('song:uploadImageChunk', {
-                    success: true,
-                    uploadId,
-                    imageUrl,
-                });
-            } else {
-                const session = imageUploadSessions.get(uploadId);
-                const progress = session
-                    ? Math.round((session.receivedCount / totalChunks) * 100)
-                    : 0;
-                socket.emit('song:uploadImageChunk', {
-                    success: true,
-                    uploadId,
-                    progress,
-                });
-            }
-        } catch (error) {
-            console.error('Image chunk upload error:', error);
-            socket.emit('song:uploadImageChunk', {
-                success: false,
-                message: 'Failed to upload image chunk',
-            });
-        }
-    });
 
     // Get albums
     socket.on('albums:list', async (data) => {
@@ -561,10 +414,10 @@ function handleSocket(socket, _io) {
                 LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
             `);
 
-            // Secure album art URLs
+            // Generate album art URLs
             for (const album of albums) {
                 if (album.cover_art_url) {
-                    album.cover_art_url = await secureImageUrl(album.cover_art_url);
+                    album.cover_art_url = await storageService.generateUrl(album.cover_art_url);
                 }
             }
 
@@ -624,15 +477,14 @@ function handleSocket(socket, _io) {
                 [searchTerm, searchTerm, searchTerm, searchTerm]
             );
 
-            // Secure album art URLs and pre-generate play URLs
+            // Generate URLs for songs
             for (const song of songs) {
                 if (song.cover_art_url) {
-                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                    song.cover_art_url = await storageService.generateUrl(song.cover_art_url);
                 }
-                // Pre-generate signed URL for faster playback
+                // Pre-generate play URL for faster playback
                 if (song.file_path) {
-                    const audioKey = extractS3Key(song.file_path);
-                    song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
+                    song.play_url = await storageService.generateUrl(song.file_path);
                 }
             }
 
@@ -726,15 +578,14 @@ function handleSocket(socket, _io) {
                 [socket.user.id]
             );
 
-            // Secure album art URLs and pre-generate play URLs
+            // Generate URLs for songs
             for (const song of songs) {
                 if (song.cover_art_url) {
-                    song.cover_art_url = await secureImageUrl(song.cover_art_url);
+                    song.cover_art_url = await storageService.generateUrl(song.cover_art_url);
                 }
-                // Pre-generate signed URL for faster playback
+                // Pre-generate play URL for faster playback
                 if (song.file_path) {
-                    const audioKey = extractS3Key(song.file_path);
-                    song.play_url = audioKey ? await generateSecureUrl(audioKey, 3600) : song.file_path;
+                    song.play_url = await storageService.generateUrl(song.file_path);
                 }
             }
 

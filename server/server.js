@@ -154,17 +154,10 @@ app.get("/api/og/song/:id", ogRateLimiter, async (req, res) => {
 
         const song = songs[0];
 
-        // Import secureImageUrl function
-        const { generateSecureUrl } = require("./services/uploadService");
-        const extractS3Key = (url) =>
-            url ? url.split("/").slice(-2).join("/") : null;
-        const secureImageUrl = async (url) => {
-            const key = extractS3Key(url);
-            return key ? await generateSecureUrl(key, 3600) : url;
-        };
-
+        // Generate secure image URL
+        const storageService = require("./services/storageService");
         const securedImageUrl = song.cover_art_url
-            ? await secureImageUrl(song.cover_art_url)
+            ? await storageService.generateUrl(song.cover_art_url)
             : null;
 
         res.json({
@@ -219,17 +212,10 @@ app.get("/api/og/album", ogRateLimiter, async (req, res) => {
 
         const album = albums[0];
 
-        // Secure the image URL
-        const { generateSecureUrl } = require("./services/uploadService");
-        const extractS3Key = (url) =>
-            url ? url.split("/").slice(-2).join("/") : null;
-        const secureImageUrl = async (url) => {
-            const key = extractS3Key(url);
-            return key ? await generateSecureUrl(key, 3600) : url;
-        };
-
+        // Generate secure image URL
+        const storageService = require("./services/storageService");
         const securedImageUrl = album.cover_art_url
-            ? await secureImageUrl(album.cover_art_url)
+            ? await storageService.generateUrl(album.cover_art_url)
             : null;
 
         res.json({
@@ -269,17 +255,10 @@ app.get("/api/og/library/:username", ogRateLimiter, async (req, res) => {
 
         const library = songs[0];
 
-        // Secure the image URL
-        const { generateSecureUrl } = require("./services/uploadService");
-        const extractS3Key = (url) =>
-            url ? url.split("/").slice(-2).join("/") : null;
-        const secureImageUrl = async (url) => {
-            const key = extractS3Key(url);
-            return key ? await generateSecureUrl(key, 3600) : url;
-        };
-
+        // Generate secure image URL
+        const storageService = require("./services/storageService");
         const securedImageUrl = library.cover_art_url
-            ? await secureImageUrl(library.cover_art_url)
+            ? await storageService.generateUrl(library.cover_art_url)
             : null;
 
         res.json({
@@ -319,17 +298,10 @@ app.get("/api/og/artist/:name", ogRateLimiter, async (req, res) => {
 
         const artist = songs[0];
 
-        // Secure the image URL
-        const { generateSecureUrl } = require("./services/uploadService");
-        const extractS3Key = (url) =>
-            url ? url.split("/").slice(-2).join("/") : null;
-        const secureImageUrl = async (url) => {
-            const key = extractS3Key(url);
-            return key ? await generateSecureUrl(key, 3600) : url;
-        };
-
+        // Generate secure image URL
+        const storageService = require("./services/storageService");
         const securedImageUrl = artist.cover_art_url
-            ? await secureImageUrl(artist.cover_art_url)
+            ? await storageService.generateUrl(artist.cover_art_url)
             : null;
 
         res.json({
@@ -757,11 +729,7 @@ function startCLI() {
         console.log(
             `Active Song Uploads: ${activeUploads ? activeUploads.size : 0}`
         );
-        console.log(
-            `Active Image Uploads: ${
-                imageUploadSessions ? imageUploadSessions.size : 0
-            }`
-        );
+        console.log(`Active Image Uploads: 0`);
 
         // Memory usage
         const memUsage = process.memoryUsage();
@@ -810,26 +778,7 @@ function startCLI() {
         }
 
         console.log("\n=== Active Image Uploads ===");
-
-        if (!imageUploadSessions || imageUploadSessions.size === 0) {
-            console.log("No active image uploads");
-        } else {
-            console.log("ID | User | Chunks | Progress");
-            console.log("---|------|--------|----------");
-
-            for (const [uploadId, session] of imageUploadSessions.entries()) {
-                const shortId = uploadId.substring(0, 8);
-                const progress = `${session.receivedCount}/${session.totalChunks}`;
-
-                console.log(
-                    `${shortId} | ${session.userId
-                        .toString()
-                        .padEnd(4)} | ${session.totalChunks
-                        .toString()
-                        .padEnd(6)} | ${progress}`
-                );
-            }
-        }
+        console.log("No active image uploads");
     }
 
     async function debugUsers() {

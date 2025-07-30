@@ -36,13 +36,8 @@ class LocalStorageProvider {
     }
 
     async generateUrl(key, expiresIn = 900) {
-        // For local storage, generate signed URL with JWT
-        const token = jwt.sign(
-            { key, exp: Math.floor(Date.now() / 1000) + expiresIn },
-            config.auth.jwtSecret
-        );
-        
-        return `${this.baseUrl}/${key}?token=${token}`;
+        // For local storage, return public URL
+        return `/files/${key}`;
     }
 
     async deleteFile(key) {

@@ -11,6 +11,7 @@ services:
     volumes:
       - ./.env.client:/app/.env.client
       - ./server/.env:/app/server/.env
+      - ./server/storage:/app/server/storage
     depends_on:
       - db
       - redis
