@@ -65,7 +65,7 @@ create-admin admin your_password
 ```
 
 5. **Access application**
-Open http://localhost:3005 and login with admin credentials.
+Open http://localhost and login with admin credentials.
 
 ## 🐳 Docker Deployment
 

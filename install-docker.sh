@@ -63,8 +63,13 @@ else
     
     # Add user to docker group
     sudo usermod -aG docker $USER
-    print_warning "You'll need to log out and back in for Docker permissions to take effect"
-    print_status "Or run: newgrp docker"
+fi
+
+# Check Docker permissions
+if ! docker ps &>/dev/null; then
+    print_warning "Docker permissions not active. Activating docker group..."
+    print_status "Running 'newgrp docker' to activate permissions"
+    exec newgrp docker "$0" "$@"
 fi
 
 if command -v docker-compose &> /dev/null; then
