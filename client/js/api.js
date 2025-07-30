@@ -32,10 +32,10 @@ class API {
                 this.socket.disconnect();
             }
 
-            const serverUrl =
-                window.location.hostname === "localhost"
-                    ? "http://localhost:3005"
-                    : `https://${window.location.hostname}:3005`;
+            // Use environment-based protocol detection instead of hostname
+            const useHttps = window.APP_ENV === 'production' || window.FORCE_HTTPS === 'true';
+            const protocol = useHttps ? 'https' : 'http';
+            const serverUrl = `${protocol}://${window.location.hostname}:3005`;
 
             this.socket = io(serverUrl, {
                 auth: {

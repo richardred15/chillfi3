@@ -15,9 +15,24 @@ if (file_exists('.env.client')) {
     }
 }
 
+// Load server configuration for environment variables
+$serverEnv = [];
+if (file_exists('server/.env')) {
+    $lines = file('server/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $serverEnv[trim($key)] = trim($value);
+        }
+    }
+}
+
 // Configuration
 $appName = $_ENV['APP_NAME'] ?? 'MusicLib';
 $apiUrl = $_ENV['API_URL'] ?? 'http://localhost:3005/api';
+$nodeEnv = $serverEnv['NODE_ENV'] ?? 'production';
+$forceHttps = $serverEnv['FORCE_HTTPS'] ?? 'false';
 
 // Default meta tags
 $pageTitle = "{$appName} - Private Music Library";
@@ -206,6 +221,10 @@ function escapeHtml($text)
     <link rel="stylesheet" href="client/css/visualizer.css">
     <link rel="stylesheet" href="client/css/components/empty-states.css">
     <script>
+        // Pass environment variables to client
+        window.APP_ENV = '<?php echo $nodeEnv; ?>';
+        window.FORCE_HTTPS = '<?php echo $forceHttps; ?>';
+        
         // Load theme immediately to prevent flash
         (function() {
             const appName = '<?php echo strtolower($appName); ?>';
