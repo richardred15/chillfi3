@@ -60,6 +60,11 @@ async function generateSecureUrl(s3Key, expiresIn = 900) {
 
 // Helper to secure image URLs
 async function secureImageUrl(url) {
+    // If using local storage, return URL as-is
+    if (config.storage?.type === 'local') {
+        return url;
+    }
+    
     const key = extractS3Key(url);
     return key ? await generateSecureUrl(key, 3600) : url;
 }
