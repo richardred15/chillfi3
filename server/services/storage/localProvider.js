@@ -3,7 +3,6 @@
  */
 const fs = require('fs').promises;
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const config = require('../../config');
 
 class LocalStorageProvider {
@@ -13,12 +12,18 @@ class LocalStorageProvider {
     }
 
     async initialize() {
-        // Create directory structure
-        const folders = ['songs', 'album_art', 'song_art', 'profiles', 'artist_images'];
-        
-        for (const folder of folders) {
-            const folderPath = path.join(this.storagePath, folder);
-            await fs.mkdir(folderPath, { recursive: true });
+        try {
+            // Create directory structure
+            const folders = ['songs', 'album_art', 'song_art', 'profiles', 'artist_images'];
+            
+            for (const folder of folders) {
+                const folderPath = path.join(this.storagePath, folder);
+                await fs.mkdir(folderPath, { recursive: true });
+            }
+            console.log('Local storage directories initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize local storage directories:', error.message);
+            throw error;
         }
     }
 

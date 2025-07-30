@@ -19,8 +19,16 @@ class StorageService {
                 this.provider = new LocalStorageProvider(config.storage.localPath);
                 break;
             case 's3':
-            default:
                 this.provider = new S3StorageProvider(config.aws);
+                break;
+            default:
+                // Default to local storage if no AWS credentials
+                if (config.aws.accessKeyId && config.aws.secretAccessKey) {
+                    this.provider = new S3StorageProvider(config.aws);
+                } else {
+                    console.log('No storage type specified and no AWS credentials found, defaulting to local storage');
+                    this.provider = new LocalStorageProvider(config.storage.localPath);
+                }
                 break;
         }
     }
