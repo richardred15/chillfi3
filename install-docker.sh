@@ -263,7 +263,7 @@ if [[ -z "$ADMIN_USERNAME" || -z "$ADMIN_PASSWORD" ]]; then
 fi
 
 print_status "Creating admin user..."
-echo "create-admin $ADMIN_USERNAME $ADMIN_PASSWORD" | docker-compose exec -T app sh -c "cd /app/server && node server.js"
+echo "create-admin $ADMIN_USERNAME $ADMIN_PASSWORD" | docker-compose exec -T app sh -c "cd /app/server && node cli.js"
 
 # Step 5: Final Instructions
 print_header "\n=== Installation Complete! ==="
