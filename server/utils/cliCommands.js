@@ -415,6 +415,7 @@ class CLICommands {
                     break;
                 case 'create-admin':
                     await this.createAdmin(args[0], args[1]);
+                    console.log('Admin creation completed');
                     break;
                 case 'debug-users':
                     await this.debugUsers();

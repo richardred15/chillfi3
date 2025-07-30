@@ -28,7 +28,13 @@ async function main() {
     if (args.length > 0) {
         // Non-interactive mode - execute single command
         const [command, ...commandArgs] = args;
-        await cliCommands.executeCommand(command, commandArgs);
+        try {
+            await cliCommands.executeCommand(command, commandArgs);
+            // Add small delay to ensure async operations complete
+            await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+            console.error('Command failed:', error.message);
+        }
         await cleanup();
         return;
     }
@@ -76,6 +82,13 @@ async function main() {
         }
 
         await cliCommands.executeCommand(command, commandArgs);
+        
+        // If input is piped (not a TTY), exit after command
+        if (!process.stdin.isTTY) {
+            rl.close();
+            return;
+        }
+        
         rl.prompt();
     });
 
