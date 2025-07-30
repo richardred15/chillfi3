@@ -220,6 +220,7 @@ function escapeHtml($text)
     <link rel="stylesheet" href="client/css/main.css">
     <link rel="stylesheet" href="client/css/visualizer.css">
     <link rel="stylesheet" href="client/css/components/empty-states.css">
+    <script src="client/js/utils/sha256.js"></script>
     <script>
         // Pass environment variables to client
         window.APP_ENV = '<?php echo $nodeEnv; ?>';
