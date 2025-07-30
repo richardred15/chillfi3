@@ -58,7 +58,7 @@ const config = {
     // Storage configuration
     storage: {
         type: process.env.STORAGE_TYPE || 's3',
-        localPath: process.env.LOCAL_STORAGE_PATH || './storage',
+        localPath: process.env.LOCAL_STORAGE_PATH || './server/storage',
     },
 
     // Environment
