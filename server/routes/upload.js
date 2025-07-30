@@ -82,4 +82,52 @@ router.post('/album-art', authenticateToken, upload.single('image'), async (req,
     }
 });
 
+// Upload songs
+router.post('/songs', authenticateToken, upload.array('files'), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'No files provided' 
+            });
+        }
+
+        const metadata = JSON.parse(req.body.metadata || '[]');
+        const results = [];
+
+        for (let i = 0; i < req.files.length; i++) {
+            const file = req.files[i];
+            const fileMeta = metadata[i] || {};
+
+            try {
+                const songId = await uploadService.processFile(file, fileMeta, req.user.id);
+                results.push({
+                    success: true,
+                    songId,
+                    filename: file.originalname
+                });
+            } catch (error) {
+                console.error('File upload error:', error);
+                results.push({
+                    success: false,
+                    error: error.message,
+                    filename: file.originalname
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            results
+        });
+        
+    } catch (error) {
+        console.error('Songs upload error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to upload songs: ' + error.message 
+        });
+    }
+});
+
 module.exports = router;
