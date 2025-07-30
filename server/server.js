@@ -72,7 +72,7 @@ app.use(
             // Allow requests with no origin (mobile apps, etc.)
             if (!origin) return callback(null, true);
 
-            const allowedOrigins = [config.client.url];
+            const allowedOrigins = [config.client.url, "*"];
             if (process.env.NODE_ENV === "development") {
                 allowedOrigins.push(
                     process.env.DEV_CLIENT_URL || "http://localhost"
