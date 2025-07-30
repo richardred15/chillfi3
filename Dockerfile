@@ -42,6 +42,7 @@ RUN mkdir -p /var/log/supervisor /run/nginx /var/tmp/nginx
 
 # Set permissions
 RUN chown -R www-data:www-data /app
+RUN chown -R www-data:www-data /app/server/storage
 RUN chmod +x /app/server/server.js
 
 # Expose ports
