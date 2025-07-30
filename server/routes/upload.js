@@ -110,7 +110,7 @@ router.post('/songs', authenticateToken, upload.array('files'), async (req, res)
                 console.error('File upload error:', error);
                 results.push({
                     success: false,
-                    error: error.message,
+                    error: 'Failed to upload file',
                     filename: file.originalname
                 });
             }

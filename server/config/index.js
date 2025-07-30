@@ -6,11 +6,19 @@ const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
+function requireEnv(name) {
+    const value = process.env[name];
+    if (!value) {
+        throw new Error(`Required environment variable ${name} is not set`);
+    }
+    return value;
+}
+
 const config = {
     // Server configuration
     server: {
-        port: process.env.PORT || 3005,
-        host: process.env.HOST || 'localhost',
+        port: requireEnv('PORT'),
+        host: requireEnv('HOST'),
         httpsKey: process.env.HTTPS_KEY,
         httpsCert: process.env.HTTPS_CERT,
         httpsCa: process.env.HTTPS_CA,
@@ -18,52 +26,64 @@ const config = {
 
     // Database configuration
     database: {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 3306,
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'musiclib',
+        host: requireEnv('DB_HOST'),
+        port: requireEnv('DB_PORT'),
+        user: requireEnv('DB_USER'),
+        password: requireEnv('DB_PASSWORD'),
+        database: requireEnv('DB_NAME'),
     },
 
-    // AWS configuration
+    // AWS configuration (only required if using S3)
     aws: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        region: process.env.AWS_REGION || 'us-west-2',
-        s3Bucket: process.env.S3_BUCKET_NAME || 'musiclib-storage',
+        region: process.env.AWS_REGION,
+        s3Bucket: process.env.S3_BUCKET_NAME,
     },
 
     // Authentication configuration
     auth: {
-        jwtSecret: process.env.JWT_SECRET || 'change-this-secret-key',
-        tokenExpiry: process.env.TOKEN_EXPIRY || '7d',
+        jwtSecret: requireEnv('JWT_SECRET'),
+        tokenExpiry: requireEnv('TOKEN_EXPIRY'),
     },
 
     // Upload configuration
     upload: {
-        maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024,
-        chunkSize: parseInt(process.env.CHUNK_SIZE) || 512 * 1024,
+        maxFileSize: parseInt(requireEnv('MAX_FILE_SIZE')),
+        chunkSize: parseInt(requireEnv('CHUNK_SIZE')),
     },
 
     // Logging configuration
     logging: {
-        level: process.env.LOG_LEVEL || 'INFO',
+        level: requireEnv('LOG_LEVEL'),
     },
 
     // Client configuration
     client: {
-        url: process.env.CLIENT_URL || 'http://localhost',
+        url: requireEnv('CLIENT_URL'),
     },
 
     // Storage configuration
     storage: {
-        type: process.env.STORAGE_TYPE || 's3',
-        localPath: process.env.LOCAL_STORAGE_PATH || './server/storage',
+        type: requireEnv('STORAGE_TYPE'),
+        localPath: process.env.LOCAL_STORAGE_PATH,
     },
 
     // Environment
-    env: process.env.NODE_ENV || 'development',
+    env: requireEnv('NODE_ENV'),
     isProduction: process.env.NODE_ENV === 'production',
 };
+
+// Validate storage-specific requirements
+if (config.storage.type === 'local' && !config.storage.localPath) {
+    throw new Error('LOCAL_STORAGE_PATH is required when STORAGE_TYPE is local');
+}
+
+if (config.storage.type === 's3') {
+    if (!config.aws.accessKeyId) throw new Error('AWS_ACCESS_KEY_ID is required when STORAGE_TYPE is s3');
+    if (!config.aws.secretAccessKey) throw new Error('AWS_SECRET_ACCESS_KEY is required when STORAGE_TYPE is s3');
+    if (!config.aws.region) throw new Error('AWS_REGION is required when STORAGE_TYPE is s3');
+    if (!config.aws.s3Bucket) throw new Error('S3_BUCKET_NAME is required when STORAGE_TYPE is s3');
+}
 
 module.exports = config;

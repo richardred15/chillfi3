@@ -10,19 +10,13 @@ class LocalStorageProvider {
         this.storagePath = storagePath;
     }
 
-    async initialize() {
-        try {
-            // Create directory structure
-            const folders = ['songs', 'album_art', 'song_art', 'profiles', 'artist_images'];
-            
-            for (const folder of folders) {
-                const folderPath = path.join(this.storagePath, folder);
-                await fs.mkdir(folderPath, { recursive: true });
-            }
-            console.log('Local storage directories initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize local storage directories:', error.message);
-            throw error;
+    initialize() {
+        // Create directory structure synchronously
+        const folders = ['songs', 'album_art', 'song_art', 'profiles', 'artist_images'];
+        
+        for (const folder of folders) {
+            const folderPath = path.join(this.storagePath, folder);
+            require('fs').mkdirSync(folderPath, { recursive: true });
         }
     }
 

@@ -360,11 +360,9 @@ database
         } else {
             logger.warn("Redis not available, running without cache");
         }
-        // Initialize storage service
+        // Initialize storage service synchronously
         const storageService = require('./services/storageService');
-        return storageService.initialize();
-    })
-    .then(() => {
+        storageService.initialize();
         logger.info(`Storage service initialized (${config.storage.type})`);
     })
     .catch((err) => {

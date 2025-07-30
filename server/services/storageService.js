@@ -22,14 +22,7 @@ class StorageService {
                 this.provider = new S3StorageProvider(config.aws);
                 break;
             default:
-                // Default to local storage if no AWS credentials
-                if (config.aws.accessKeyId && config.aws.secretAccessKey) {
-                    this.provider = new S3StorageProvider(config.aws);
-                } else {
-                    console.log('No storage type specified and no AWS credentials found, defaulting to local storage');
-                    this.provider = new LocalStorageProvider(config.storage.localPath);
-                }
-                break;
+                throw new Error(`Invalid STORAGE_TYPE: ${storageType}. Must be 'local' or 's3'`);
         }
     }
 
@@ -45,9 +38,9 @@ class StorageService {
         return await this.provider.deleteFile(key);
     }
 
-    async initialize() {
+    initialize() {
         if (this.provider.initialize) {
-            await this.provider.initialize();
+            this.provider.initialize();
         }
     }
 }
