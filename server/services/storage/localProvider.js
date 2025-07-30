@@ -8,7 +8,6 @@ const config = require('../../config');
 class LocalStorageProvider {
     constructor(storagePath) {
         this.storagePath = storagePath;
-        this.baseUrl = `${config.client.url}/files`;
     }
 
     async initialize() {
@@ -37,7 +36,7 @@ class LocalStorageProvider {
         // Write file
         await fs.writeFile(filePath, buffer);
         
-        return `${this.baseUrl}/${key}`;
+        return key; // Return just the key for local storage
     }
 
     async generateUrl(key, expiresIn = 900) {
