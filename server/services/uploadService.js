@@ -1,21 +1,11 @@
 /**
  * Upload Service
  */
-const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
 const config = require('../config');
 const database = require('../database');
+const storageService = require('./storageService');
 const { findOrCreateArtist, findOrCreateAlbum } = require('./songService');
-
-const s3Client = new S3Client({
-    region: config.aws.region,
-    credentials: {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
-    },
-});
-const BUCKET_NAME = config.aws.s3Bucket;
 
 // Image upload sessions storage with size limit
 const imageUploadSessions = new Map();
@@ -73,20 +63,15 @@ function cleanupSession(uploadId) {
 }
 
 // Generate secure URL with caching
-async function generateSecureUrl(s3Key, expiresIn = 900) {
-    const cacheKey = `${s3Key}_${expiresIn}`;
+async function generateSecureUrl(key, expiresIn = 900) {
+    const cacheKey = `${key}_${expiresIn}`;
     const cached = urlCache.get(cacheKey);
     
     if (cached && Date.now() < cached.expires) {
         return cached.url;
     }
     
-    const command = new GetObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: s3Key
-    });
-    
-    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    const url = await storageService.generateUrl(key, expiresIn);
     
     urlCache.set(cacheKey, {
         url,
@@ -175,15 +160,7 @@ async function uploadArtwork(artworkData, filename) {
         `song_art/${filename}.jpg` : 
         `album_art/${filename}.jpg`;
 
-    const uploadCommand = new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: key,
-        Body: artworkBuffer,
-        ContentType: 'image/jpeg',
-    });
-
-    await s3Client.send(uploadCommand);
-    return `https://${BUCKET_NAME}.s3.${config.aws.region}.amazonaws.com/${key}`;
+    return await storageService.uploadFile(artworkBuffer, key, 'image/jpeg');
 }
 
 async function processImageChunk(

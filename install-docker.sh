@@ -101,16 +101,32 @@ if [[ -z "$DB_PASSWORD" ]]; then
 fi
 
 echo
-print_header "AWS S3 Configuration (Required for file storage):"
-echo "You need an AWS S3 bucket for storing music files and images."
-echo "Visit: https://console.aws.amazon.com/s3/"
+print_header "Storage Configuration:"
+echo "Choose your file storage option:"
+echo "1. AWS S3 (cloud storage)"
+echo "2. Local disk (server storage)"
 echo
+read -p "Select storage type (1 or 2): " STORAGE_CHOICE
 
-read -p "AWS Access Key ID: " AWS_ACCESS_KEY_ID
-read -p "AWS Secret Access Key: " AWS_SECRET_ACCESS_KEY
-read -p "S3 Bucket Name: " S3_BUCKET_NAME
-read -p "AWS Region (default: us-west-2): " AWS_REGION
-AWS_REGION=${AWS_REGION:-us-west-2}
+if [[ "$STORAGE_CHOICE" == "2" ]]; then
+    STORAGE_TYPE="local"
+    read -p "Local storage path (default: ./storage): " LOCAL_STORAGE_PATH
+    LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH:-./storage}
+    print_status "Using local disk storage at: $LOCAL_STORAGE_PATH"
+else
+    STORAGE_TYPE="s3"
+    echo
+    print_header "AWS S3 Configuration:"
+    echo "You need an AWS S3 bucket for storing music files and images."
+    echo "Visit: https://console.aws.amazon.com/s3/"
+    echo
+    
+    read -p "AWS Access Key ID: " AWS_ACCESS_KEY_ID
+    read -p "AWS Secret Access Key: " AWS_SECRET_ACCESS_KEY
+    read -p "S3 Bucket Name: " S3_BUCKET_NAME
+    read -p "AWS Region (default: us-west-2): " AWS_REGION
+    AWS_REGION=${AWS_REGION:-us-west-2}
+fi
 
 echo
 print_header "Application Configuration:"
@@ -123,6 +139,7 @@ read -p "Domain name (for production, leave empty for localhost): " DOMAIN_NAME
 JWT_SECRET=$(openssl rand -base64 64 | tr -d "=+/" | cut -c1-50)
 
 # Update server/.env
+if [[ "$STORAGE_TYPE" == "local" ]]; then
 cat > server/.env << EOF
 # Database Configuration
 DB_HOST=db
@@ -134,6 +151,35 @@ DB_PORT=3306
 # Redis Configuration
 REDIS_HOST=redis
 REDIS_PORT=6379
+
+# Storage Configuration
+STORAGE_TYPE=local
+LOCAL_STORAGE_PATH=$LOCAL_STORAGE_PATH
+
+# Application Configuration
+JWT_SECRET=$JWT_SECRET
+PORT=3005
+NODE_ENV=development
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/chillfi3.log
+EOF
+else
+cat > server/.env << EOF
+# Database Configuration
+DB_HOST=db
+DB_USER=musiclib
+DB_PASSWORD=$DB_PASSWORD
+DB_NAME=musiclib
+DB_PORT=3306
+
+# Redis Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# Storage Configuration
+STORAGE_TYPE=s3
 
 # AWS S3 Configuration
 AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
@@ -150,6 +196,7 @@ NODE_ENV=development
 LOG_LEVEL=info
 LOG_FILE=logs/chillfi3.log
 EOF
+fi
 
 # Update client environment
 if [[ -n "$DOMAIN_NAME" ]]; then

@@ -55,6 +55,12 @@ const config = {
         url: process.env.CLIENT_URL || 'http://localhost',
     },
 
+    // Storage configuration
+    storage: {
+        type: process.env.STORAGE_TYPE || 's3',
+        localPath: process.env.LOCAL_STORAGE_PATH || './storage',
+    },
+
     // Environment
     env: process.env.NODE_ENV || 'development',
     isProduction: process.env.NODE_ENV === 'production',

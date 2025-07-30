@@ -347,6 +347,9 @@ app.get("/api/og/artist/:name", ogRateLimiter, async (req, res) => {
 // API routes
 app.use("/api/upload", require("./routes/upload"));
 
+// File serving route for local storage
+app.use("/files", require("./routes/files"));
+
 app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -372,7 +375,7 @@ const io = new Server(server, {
     },
 });
 
-// Initialize database and Redis
+// Initialize database, Redis, and storage
 database
     .init()
     .then(() => {
@@ -385,9 +388,15 @@ database
         } else {
             logger.warn("Redis not available, running without cache");
         }
+        // Initialize storage service
+        const storageService = require('./services/storageService');
+        return storageService.initialize();
+    })
+    .then(() => {
+        logger.info(`Storage service initialized (${config.storage.type})`);
     })
     .catch((err) => {
-        logger.error("Database initialization failed", { error: err.message });
+        logger.error("Service initialization failed", { error: err.message });
         process.exit(1);
     });
 
