@@ -529,19 +529,9 @@ server.listen(PORT, () => {
 
 // Interactive CLI
 function startCLI() {
-    const readline = require("readline");
-    const bcrypt = require("bcrypt");
-
-    let imageUploadSessions;
-    try {
-        const uploadService = require("./services/uploadService");
-        // uploadSessions = uploadService.uploadSessions;
-        imageUploadSessions = uploadService.imageUploadSessions;
-    } catch (error) {
-        console.log("Upload service not available");
-        // uploadSessions = new Map();
-        imageUploadSessions = new Map();
-    }
+    const CLICommands = require('./utils/cliCommands');
+    const cliCommands = new CLICommands();
+    const readline = require('readline');
 
     const rl = readline.createInterface({
         input: process.stdin,
@@ -601,119 +591,7 @@ function startCLI() {
     rl.on("line", async (line) => {
         const [command, ...args] = line.trim().split(" ");
 
-        try {
-            switch (command) {
-                case "help":
-                    console.log("\nDatabase Commands:");
-                    console.log(
-                        "  setup-database                          - Initialize database with schema"
-                    );
-                    console.log(
-                        "  migrate                                  - Migrate database to latest schema"
-                    );
-                    console.log(
-                        "  backup [filename]                       - Create database backup"
-                    );
-                    console.log(
-                        "  restore <filename>                      - Restore database from backup"
-                    );
-                    console.log("\nUser Management:");
-                    console.log(
-                        "  create-admin <username> <password>      - Create admin user"
-                    );
-                    console.log(
-                        "  add-user <username> [password] [admin]  - Add user"
-                    );
-                    console.log(
-                        "  list-users                              - List users"
-                    );
-                    console.log(
-                        "  reset-password <username> <password>    - Reset password"
-                    );
-                    console.log(
-                        "  make-admin <username> [true|false]      - Toggle admin"
-                    );
-                    console.log("\nSystem Information:");
-                    console.log(
-                        "  status                                   - Server status"
-                    );
-                    console.log(
-                        "  uploads                                  - Active uploads"
-                    );
-                    console.log(
-                        "  clear                                    - Clear screen"
-                    );
-                    console.log(
-                        "  debug-users                              - Debug user table"
-                    );
-                    console.log(
-                        "  help                                     - Show this help"
-                    );
-                    break;
-
-                case "add-user":
-                    await addUser(args[0], args[1], args[2]);
-                    break;
-
-                case "list-users":
-                    await listUsers();
-                    break;
-
-                case "reset-password":
-                    await resetPassword(args[0], args[1]);
-                    break;
-
-                case "make-admin":
-                    await makeAdmin(args[0], args[1]);
-                    break;
-
-                case "status":
-                    await showStatus();
-                    break;
-
-                case "uploads":
-                    showUploads();
-                    break;
-
-                case "clear":
-                    console.clear();
-                    break;
-
-                case "setup-database":
-                    await setupDatabase();
-                    break;
-
-                case "migrate":
-                    await migrateDatabase();
-                    break;
-
-                case "backup":
-                    await backupDatabase(args[0]);
-                    break;
-
-                case "restore":
-                    await restoreDatabase(args[0]);
-                    break;
-
-                case "create-admin":
-                    await createAdmin(args[0], args[1]);
-                    break;
-
-                case "debug-users":
-                    await debugUsers();
-                    break;
-
-                case "":
-                    break;
-
-                default:
-                    console.log(
-                        `Unknown command: ${command}. Type "help" for available commands.`
-                    );
-            }
-        } catch (error) {
-            console.error(error.message);
-        }
+        await cliCommands.executeCommand(command, args);
 
         rl.prompt();
     });
