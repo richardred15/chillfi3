@@ -28,7 +28,10 @@ const app = express();
 const PORT = config.server.port;
 
 // HTTPS enforcement in production only
-if (process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS === "true") {
+if (
+    process.env.NODE_ENV === "production" &&
+    process.env.FORCE_HTTPS === "true"
+) {
     app.use((req, res, next) => {
         if (req.header("x-forwarded-proto") !== "https") {
             res.redirect(`https://${req.header("host")}${req.url}`);
@@ -72,7 +75,7 @@ app.use(
             const allowedOrigins = [config.client.url];
             if (process.env.NODE_ENV === "development") {
                 allowedOrigins.push(
-                    process.env.DEV_CLIENT_URL || "http://localhost:3005"
+                    process.env.DEV_CLIENT_URL || "http://localhost"
                 );
             }
             if (allowedOrigins.includes(origin)) {
@@ -361,7 +364,7 @@ database
             logger.warn("Redis not available, running without cache");
         }
         // Initialize storage service synchronously
-        const storageService = require('./services/storageService');
+        const storageService = require("./services/storageService");
         storageService.initialize();
         logger.info(`Storage service initialized (${config.storage.type})`);
     })
@@ -379,7 +382,7 @@ io.on("connection", (socket) => {
         socketId: socket.id,
         userId: socket.user?.id,
         username: socket.user?.username || "anonymous",
-        authenticated: socket.authenticated
+        authenticated: socket.authenticated,
     });
 
     // Handler registry for lazy loading
@@ -500,9 +503,9 @@ server.listen(PORT, () => {
 
 // Interactive CLI
 function startCLI() {
-    const CLICommands = require('./utils/cliCommands');
+    const CLICommands = require("./utils/cliCommands");
     const cliCommands = new CLICommands();
-    const readline = require('readline');
+    const readline = require("readline");
 
     const rl = readline.createInterface({
         input: process.stdin,

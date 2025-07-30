@@ -37,7 +37,7 @@ class API {
                 window.APP_ENV === "production" ||
                 window.FORCE_HTTPS === "true";
             const protocol = useHttps ? "https" : "http";
-            const serverUrl = `${protocol}://${window.location.hostname}:3005`;
+            const serverUrl = `${protocol}://${window.location.hostname}`;
 
             this.socket = io(serverUrl, {
                 auth: {

@@ -30,7 +30,7 @@ if (file_exists('server/.env')) {
 
 // Configuration
 $appName = $_ENV['APP_NAME'] ?? 'MusicLib';
-$apiUrl = $_ENV['API_URL'] ?? 'http://localhost:3005/api';
+$apiUrl = $_ENV['API_URL'] ?? 'http://localhost/api';
 $nodeEnv = $serverEnv['NODE_ENV'] ?? 'production';
 $forceHttps = $serverEnv['FORCE_HTTPS'] ?? 'false';
 
@@ -224,7 +224,7 @@ function escapeHtml($text)
         // Pass environment variables to client
         window.APP_ENV = '<?php echo $nodeEnv; ?>';
         window.FORCE_HTTPS = '<?php echo $forceHttps; ?>';
-        
+
         // Load theme immediately to prevent flash
         (function() {
             const appName = '<?php echo strtolower($appName); ?>';
