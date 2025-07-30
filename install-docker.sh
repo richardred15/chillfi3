@@ -225,9 +225,14 @@ print_status "Environment files configured"
 # Step 3: Docker Compose Setup
 print_header "\n=== Step 3: Setting up Docker services ==="
 
-# Set environment variables for docker-compose
-export DB_PASSWORD
-export DB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+# Create .env file for docker-compose
+DB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+cat > .env << EOF
+DB_PASSWORD=$DB_PASSWORD
+DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+EOF
+
+print_status "Created Docker environment file"
 
 print_status "Building and starting services..."
 docker-compose down 2>/dev/null || true
