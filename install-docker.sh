@@ -44,8 +44,7 @@ echo "  3. Set up ChillFi3 services"
 echo "  4. Create your admin user"
 echo
 
-read -p "Continue? (y/N): " -n 1 -r
-echo
+read -p "Continue? (y/N): " -r
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
