@@ -27,8 +27,8 @@ const versionManager = require("./version");
 const app = express();
 const PORT = config.server.port;
 
-// HTTPS enforcement in production
-if (process.env.NODE_ENV === "production") {
+// HTTPS enforcement in production only
+if (process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS === "true") {
     app.use((req, res, next) => {
         if (req.header("x-forwarded-proto") !== "https") {
             res.redirect(`https://${req.header("host")}${req.url}`);
@@ -47,7 +47,7 @@ app.use(
                 scriptSrc: ["'self'", "'unsafe-inline'", "cdn.socket.io"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
                 imgSrc: ["'self'", "data:", "https:"],
-                connectSrc: ["'self'", "wss:", "https:"],
+                connectSrc: ["'self'", "ws:", "wss:", "https:"],
                 fontSrc: ["'self'"],
                 objectSrc: ["'none'"],
                 mediaSrc: ["'self'", "https:"],
