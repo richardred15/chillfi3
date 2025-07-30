@@ -1,4 +1,4 @@
-// Service Worker for ChillFi3 - Cache Busting + Offline Support
+/* // Service Worker for ChillFi3 - Cache Busting + Offline Support
 let currentVersion = '1.0.1';
 let CACHE_NAME = `chillfi3-v${currentVersion}`;
 let API_CACHE_NAME = `chillfi3-api-v${currentVersion}`;
@@ -196,4 +196,4 @@ async function handleAudioRequest(request) {
     } catch (error) {
         return new Response('Audio unavailable offline', { status: 503 });
     }
-}
+} */

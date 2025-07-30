@@ -6,7 +6,7 @@ import AuthManager from "./auth.js";
 import ContentManager from "./content.js";
 import UploadManager from "./upload.js";
 import AdminManager from "./admin.js";
-import OfflineManager from "./offline.js";
+//import OfflineManager from "./offline.js";
 import CacheManager from "./utils/cacheManager.js";
 import ContextMenu from "./components/contextMenu.js";
 import MetadataEditor from "./components/metadataEditor.js";
@@ -30,7 +30,7 @@ import ErrorHandler from "./utils/errorHandler.js";
 import URLManager from "./utils/urlManager.js";
 
 // Register service worker
-let serviceWorkerReady = false;
+/* let serviceWorkerReady = false;
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker
         .register("/sw.js")
@@ -45,7 +45,7 @@ if ("serviceWorker" in navigator) {
         .catch((error) => {
             console.error("Service Worker registration failed:", error);
         });
-}
+} */
 
 // Initialize application when DOM is loaded
 document.addEventListener("DOMContentLoaded", async function () {
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const errorHandler = new ErrorHandler(toast);
 
     // Initialize offline manager first
-    const offlineManager = new OfflineManager();
+    //const offlineManager = new OfflineManager();
 
     // Initialize API connection
     //const api = new API();
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         window.albumView = albumView;
         window.getAllFilesFromDrop = getAllFilesFromDrop;
         window.errorHandler = errorHandler;
-        window.offlineManager = offlineManager;
+        //window.offlineManager = offlineManager;
         window.player = player;
         window.visualizer = visualizer;
         window.playlistManager = playlistManager;
