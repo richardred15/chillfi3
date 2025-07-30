@@ -561,10 +561,7 @@ class API {
         return await this.emit("version:get", {});
     }
 
-    // Image upload methods
-    async uploadImageChunk(chunkData) {
-        return await this.emit("song:uploadImageChunk", chunkData);
-    }
+
 
     // Check if file hash already exists
     async checkFileHash(hash) {

@@ -610,6 +610,20 @@ class UploadManager {
     
     // Upload file with progress tracking
     uploadFileWithProgress(file, metadata, token, onProgress) {
+        const uploadId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log('Starting file upload', {
+            uploadId,
+            filename: file.name,
+            size: file.size,
+            mimetype: file.type,
+            metadata: {
+                title: metadata.title,
+                artist: metadata.artist,
+                album: metadata.album
+            }
+        });
+        
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             const formData = new FormData();
@@ -620,29 +634,97 @@ class UploadManager {
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const progress = (e.loaded / e.total) * 100;
+                    console.log('Upload progress', {
+                        uploadId,
+                        filename: file.name,
+                        progress: Math.round(progress),
+                        loaded: e.loaded,
+                        total: e.total
+                    });
                     onProgress(progress);
                 }
             });
             
             xhr.addEventListener('load', () => {
+                console.log('Upload completed', {
+                    uploadId,
+                    filename: file.name,
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    responseLength: xhr.responseText?.length || 0
+                });
+                
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const result = JSON.parse(xhr.responseText);
+                        console.log('Upload result parsed', {
+                            uploadId,
+                            filename: file.name,
+                            success: result.success,
+                            resultCount: result.results?.length || 0,
+                            requestId: result.requestId
+                        });
                         resolve(result);
                     } catch (error) {
-                        reject(new Error('Invalid response format'));
+                        console.error('Failed to parse upload response', {
+                            uploadId,
+                            filename: file.name,
+                            error: error.message,
+                            responseText: xhr.responseText?.substring(0, 500)
+                        });
+                        reject(new Error('Invalid response format: ' + error.message));
                     }
                 } else {
-                    reject(new Error(`Upload failed: ${xhr.statusText}`));
+                    console.error('Upload failed with HTTP error', {
+                        uploadId,
+                        filename: file.name,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText?.substring(0, 500)
+                    });
+                    reject(new Error(`Upload failed (${xhr.status}): ${xhr.statusText}`));
                 }
             });
             
-            xhr.addEventListener('error', () => {
-                reject(new Error('Upload failed'));
+            xhr.addEventListener('error', (e) => {
+                console.error('Upload network error', {
+                    uploadId,
+                    filename: file.name,
+                    error: e,
+                    readyState: xhr.readyState,
+                    status: xhr.status
+                });
+                reject(new Error('Network error during upload'));
             });
             
+            xhr.addEventListener('timeout', () => {
+                console.error('Upload timeout', {
+                    uploadId,
+                    filename: file.name,
+                    timeout: xhr.timeout
+                });
+                reject(new Error('Upload timeout'));
+            });
+            
+            xhr.addEventListener('abort', () => {
+                console.warn('Upload aborted', {
+                    uploadId,
+                    filename: file.name
+                });
+                reject(new Error('Upload aborted'));
+            });
+            
+            xhr.timeout = 300000; // 5 minute timeout
             xhr.open('POST', '/api/upload/songs');
             xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            
+            console.log('Sending upload request', {
+                uploadId,
+                filename: file.name,
+                url: '/api/upload/songs',
+                hasToken: !!token
+            });
+            
             xhr.send(formData);
         });
     }

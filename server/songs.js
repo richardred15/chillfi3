@@ -62,7 +62,12 @@ function handleSocket(socket, _io) {
                 limit
             );
         } catch (err) {
-            logger.error('List songs error', { error: err.message, userId: socket.user?.id });
+            logger.error('List songs error', { 
+                error: err.message, 
+                stack: err.stack,
+                userId: socket.user?.id, 
+                socketId: socket.id 
+            });
             error(socket, 'song:list', 'Failed to get songs');
         }
     });

@@ -50,7 +50,6 @@ const config = {
     // Upload configuration
     upload: {
         maxFileSize: parseInt(requireEnv('MAX_FILE_SIZE')),
-        chunkSize: parseInt(requireEnv('CHUNK_SIZE')),
     },
 
     // Logging configuration

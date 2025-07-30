@@ -1,20 +1,8 @@
 /**
  * Users Module
  */
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-// const multer = require('multer');
-const config = require('./config');
 const database = require('./database');
 const { generateSecureUrl } = require('./services/uploadService');
-
-const s3Client = new S3Client({
-    region: config.aws.region,
-    credentials: {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey
-    }
-});
-const BUCKET_NAME = config.aws.s3Bucket;
 
 // Helper to secure profile image URLs
 async function secureProfileImage(url) {
@@ -199,148 +187,9 @@ function handleSocket(socket, _io) {
         }
     });
     
-    // Upload avatar
-    socket.on('user:uploadAvatar', async (data) => {
-        console.log('Avatar upload request received:', {
-            userId: data?.userId,
-            hasImageFile: !!data?.imageFile,
-            socketUserId: socket.user?.id,
-            authenticated: socket.authenticated
-        });
-        
-        try {
-            if (!socket.authenticated) {
-                console.log('Avatar upload failed: not authenticated');
-                return socket.emit('user:uploadAvatar', { 
-                    success: false, 
-                    message: 'Authentication required' 
-                });
-            }
-            
-            const { userId, imageFile } = data;
-            
-            // Check permissions
-            if (socket.user.id !== userId && !socket.user.is_admin) {
-                console.log('Avatar upload failed: unauthorized', { socketUserId: socket.user.id, requestedUserId: userId });
-                return socket.emit('user:uploadAvatar', { 
-                    success: false, 
-                    message: 'Unauthorized' 
-                });
-            }
-            
-            if (!imageFile) {
-                console.log('Avatar upload failed: no image file');
-                return socket.emit('user:uploadAvatar', { 
-                    success: false, 
-                    message: 'Image file required' 
-                });
-            }
-            
-            console.log('Processing avatar upload for user:', userId);
-            
-            // Generate unique filename
-            const fileExtension = imageFile.name.split('.').pop();
-            const fileName = `profiles/${userId}_${Date.now()}.${fileExtension}`;
-            console.log('Generated filename:', fileName);
-            
-            // Upload to S3
-            const base64Data = imageFile.data.split(',')[1] || imageFile.data;
-            console.log('Base64 data length:', base64Data.length);
-            
-            const uploadCommand = new PutObjectCommand({
-                Bucket: BUCKET_NAME,
-                Key: fileName,
-                Body: Buffer.from(base64Data, 'base64'),
-                ContentType: imageFile.type
-            });
-            
-            console.log('Uploading to S3...');
-            await s3Client.send(uploadCommand);
-            const profileImageUrl = `https://${BUCKET_NAME}.s3.${config.aws.region}.amazonaws.com/${fileName}`;
-            console.log('S3 upload successful, URL:', profileImageUrl);
-            
-            // Update user profile
-            console.log('Updating database...');
-            const dbResult = await database.query(
-                'UPDATE users SET profile_image_url = ? WHERE id = ?',
-                [profileImageUrl, userId]
-            );
-            console.log('Database update result:', dbResult);
-            
-            // Generate secure URL for response
-            const secureUrl = await secureProfileImage(profileImageUrl);
-            console.log('Generated secure URL:', secureUrl);
-            
-            socket.emit('user:uploadAvatar', {
-                success: true,
-                profileImageUrl: secureUrl
-            });
-            
-            console.log('Avatar upload completed successfully');
-            
-        } catch (error) {
-            console.error('Upload avatar error:', error);
-            console.error('Error stack:', error.stack);
-            socket.emit('user:uploadAvatar', { 
-                success: false, 
-                message: 'Failed to upload avatar: ' + error.message 
-            });
-        }
-    });
+
     
-    // Update user avatar (called after chunked upload)
-    socket.on('user:updateAvatar', async (data) => {
-        try {
-            if (!socket.authenticated) {
-                return socket.emit('user:updateAvatar', { 
-                    success: false, 
-                    message: 'Authentication required' 
-                });
-            }
-            
-            const { userId, imageUrl } = data;
-            
-            // Check permissions
-            if (socket.user.id !== userId && !socket.user.is_admin) {
-                return socket.emit('user:updateAvatar', { 
-                    success: false, 
-                    message: 'Unauthorized' 
-                });
-            }
-            
-            if (!imageUrl) {
-                return socket.emit('user:updateAvatar', { 
-                    success: false, 
-                    message: 'Image URL required' 
-                });
-            }
-            
-            console.log('Updating user avatar in database:', { userId, imageUrl });
-            
-            // Update user profile
-            await database.query(
-                'UPDATE users SET profile_image_url = ? WHERE id = ?',
-                [imageUrl, userId]
-            );
-            
-            // Generate secure URL for response
-            const secureUrl = await secureProfileImage(imageUrl);
-            
-            socket.emit('user:updateAvatar', {
-                success: true,
-                profileImageUrl: secureUrl
-            });
-            
-            console.log('Avatar updated successfully in database');
-            
-        } catch (error) {
-            console.error('Update avatar error:', error);
-            socket.emit('user:updateAvatar', { 
-                success: false, 
-                message: 'Failed to update avatar: ' + error.message 
-            });
-        }
-    });
+
     
     // Get user stats
     socket.on('user:getStats', async (data) => {

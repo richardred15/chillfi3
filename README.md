@@ -279,7 +279,6 @@ your-bucket-name/
 - **Signed URLs**: All file access uses temporary signed URLs for security
 - **Hash-based naming**: Files are stored with SHA-256 hashes to prevent conflicts
 - **Automatic cleanup**: Deleted songs/albums remove associated S3 files
-- **Chunked uploads**: Large files are uploaded in chunks for reliability
 
 ## 🔧 Configuration
 

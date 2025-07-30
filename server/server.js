@@ -377,8 +377,9 @@ io.use(auth.authenticateSocket);
 io.on("connection", (socket) => {
     logger.info("Client connected", {
         socketId: socket.id,
-        authenticated: socket.authenticated,
+        userId: socket.user?.id,
         username: socket.user?.username || "anonymous",
+        authenticated: socket.authenticated
     });
 
     // Handler registry for lazy loading

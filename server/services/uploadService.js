@@ -6,6 +6,7 @@ const config = require('../config');
 const database = require('../database');
 const storageService = require('./storageService');
 const { findOrCreateArtist, findOrCreateAlbum } = require('./songService');
+const logger = require('../utils/logger');
 
 const activeUploads = new Map(); // Track active HTTP uploads
 
@@ -116,8 +117,35 @@ async function uploadArtwork(artworkData, filename) {
 
 // Process complete file for HTTP uploads
 async function processFile(file, metadata, userId) {
+    const processId = `process-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    logger.info('Starting file processing', {
+        processId,
+        userId,
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        metadata: {
+            title: metadata.title,
+            artist: metadata.artist,
+            album: metadata.album,
+            hasArtwork: !!metadata.artwork
+        }
+    });
+    
     try {
+        if (!file.buffer) {
+            throw new Error('File buffer is missing');
+        }
+        
         const fileBuffer = file.buffer;
+        logger.info('Generating file hash', {
+            processId,
+            userId,
+            filename: file.originalname,
+            bufferSize: fileBuffer.length
+        });
+        
         const fileHash = crypto
             .createHash('sha256')
             .update(fileBuffer)
@@ -125,29 +153,100 @@ async function processFile(file, metadata, userId) {
 
         // Generate unique filename
         const fileExtension = file.originalname.split('.').pop();
+        if (!fileExtension) {
+            throw new Error('File has no extension');
+        }
+        
         const fileName = `songs/${fileHash}.${fileExtension}`;
+        
+        logger.info('Generated file identifiers', {
+            processId,
+            userId,
+            filename: file.originalname,
+            fileHash: fileHash.substring(0, 16) + '...',
+            fileName,
+            extension: fileExtension
+        });
 
-        // Upload using storage service
-        const fileUrl = await storageService.uploadFile(fileBuffer, fileName, file.mimetype);
-
-        // Check for duplicate
+        // Check for duplicate before upload
+        logger.info('Checking for duplicate files', {
+            processId,
+            userId,
+            fileHash: fileHash.substring(0, 16) + '...'
+        });
+        
         const existing = await database.query(
-            'SELECT id FROM songs WHERE file_path = ?',
-            [fileUrl]
+            'SELECT id, title FROM songs WHERE file_path LIKE ?',
+            [`%${fileHash}%`]
         );
 
         if (existing.length > 0) {
-            throw new Error('File already exists');
+            logger.warn('Duplicate file detected', {
+                processId,
+                userId,
+                filename: file.originalname,
+                existingSongId: existing[0].id,
+                existingTitle: existing[0].title
+            });
+            throw new Error(`File already exists as: ${existing[0].title}`);
         }
 
-        return await createSongFromMetadata(
+        // Upload using storage service
+        logger.info('Starting storage upload', {
+            processId,
+            userId,
+            filename: file.originalname,
+            fileName,
+            storageType: config.storage?.type || 'unknown'
+        });
+        
+        const fileUrl = await storageService.uploadFile(fileBuffer, fileName, file.mimetype);
+        
+        logger.info('Storage upload completed', {
+            processId,
+            userId,
+            filename: file.originalname,
+            fileUrl: fileUrl.substring(0, 50) + '...'
+        });
+
+        // Create song from metadata
+        logger.info('Creating song from metadata', {
+            processId,
+            userId,
+            filename: file.originalname,
+            metadata: {
+                title: metadata.title || 'Unknown Title',
+                artist: metadata.artist,
+                album: metadata.album,
+                genre: metadata.genre
+            }
+        });
+        
+        const songId = await createSongFromMetadata(
             metadata,
             fileUrl,
             fileHash,
             userId
         );
+        
+        logger.info('File processing completed successfully', {
+            processId,
+            userId,
+            filename: file.originalname,
+            songId
+        });
+
+        return songId;
     } catch (error) {
-        console.error('ProcessFile error:', error);
+        logger.error('File processing failed', {
+            processId,
+            userId,
+            filename: file.originalname,
+            size: file.size,
+            mimetype: file.mimetype,
+            error: error.message,
+            stack: error.stack
+        });
         throw error;
     }
 }

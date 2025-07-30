@@ -1,269 +1,131 @@
 # Upload Implementation
 
 ## Overview
-This document outlines the server-side implementation details for the sequential upload system in ChillFi3.
+ChillFi3 uses HTTP multipart uploads for all file uploads (songs and images) with progress tracking via XHR events.
 
 ## Upload Process Flow
 
+### Song Uploads
+
 1. **Client-Side Preparation**
    - User selects files/folders; client traverses directories recursively
-   - Metadata extraction and editing before upload
+   - Metadata extraction using Web Workers (ID3 tags)
+   - Client-side editing of metadata before upload
 
-2. **Upload Initialization**
-   - Client sends file count/size; server generates tracking ID
+2. **HTTP Multipart Upload**
+   - Files uploaded via `POST /api/upload/songs`
+   - Uses multer middleware with memory storage
+   - Progress tracking via XHR upload progress events
 
-3. **Sequential Processing**
-   - One-by-one upload to optimize bandwidth
-   - Process: temp storage → convert → optimize → permanent storage → database
+3. **Server Processing**
+   - File validation and duplicate detection (SHA-256 hash)
+   - Metadata processing and artist/album creation
+   - S3 upload with secure file naming
+   - Database record creation
 
 4. **Progress Tracking**
-   - Server maintains state and pushes updates to client
+   - Real-time progress via XHR progress events
+   - Client displays per-file progress and overall batch progress
 
-5. **Cancellation Support**
-   - Skip individual files or cancel entire batch
-   - Server handles cleanup of temporary resources
+### Image Uploads
+
+1. **Profile Images**
+   - Endpoint: `POST /api/upload/profile-image`
+   - Updates user profile_image_url in database
+   - Returns secure pre-signed URL
+
+2. **Album Art**
+   - Endpoint: `POST /api/upload/album-art`
+   - Stores in S3 album_art folder
+   - Returns public S3 URL
 
 ## Server Implementation
 
-### Upload Manager
-```javascript
-// Upload manager to track and control uploads
-class UploadManager {
-  constructor() {
-    this.uploads = new Map(); // Map of uploadId -> upload state
-  }
-  
-  // Initialize a new upload batch
-  initUpload(userId, fileCount) {
-    const uploadId = generateUniqueId();
-    
-    this.uploads.set(uploadId, {
-      userId,
-      fileCount,
-      filesProcessed: 0,
-      currentFile: null,
-      progress: 0,
-      status: 'initialized',
-      startTime: Date.now(),
-      shouldSkip: false
-    });
-    
-    return uploadId;
-  }
-  
-  // Update upload progress
-  updateProgress(uploadId, fileIndex, fileName, progress) {
-    const upload = this.uploads.get(uploadId);
-    if (!upload) return false;
-    
-    upload.currentFile = {
-      index: fileIndex,
-      name: fileName
-    };
-    upload.progress = progress;
-    
-    return true;
-  }
-  
-  // Mark file as processed
-  fileProcessed(uploadId) {
-    const upload = this.uploads.get(uploadId);
-    if (!upload) return false;
-    
-    upload.filesProcessed++;
-    upload.currentFile = null;
-    
-    // Check if all files are processed
-    if (upload.filesProcessed >= upload.fileCount) {
-      upload.status = 'completed';
-      upload.progress = 100;
-      
-      // Clean up after some time
-      setTimeout(() => {
-        this.uploads.delete(uploadId);
-      }, 3600000); // Keep for 1 hour
-    }
-    
-    return true;
-  }
-  
-  // Skip current file
-  skipFile(uploadId) {
-    const upload = this.uploads.get(uploadId);
-    if (!upload) return false;
-    
-    upload.shouldSkip = true;
-    
-    return true;
-  }
-  
-  // Cancel upload
-  cancelUpload(uploadId) {
-    const upload = this.uploads.get(uploadId);
-    if (!upload) return false;
-    
-    upload.status = 'cancelled';
-    
-    // Clean up after some time
-    setTimeout(() => {
-      this.uploads.delete(uploadId);
-    }, 60000); // Keep for 1 minute
-    
-    return true;
-  }
-  
-  // Get upload status
-  getStatus(uploadId) {
-    return this.uploads.get(uploadId) || { status: 'not_found' };
-  }
-}
-```
-
-### Socket.IO Handlers
+### Upload Routes (`routes/upload.js`)
 
 ```javascript
-// Initialize upload manager
-const uploadManager = new UploadManager();
-
-// Handle upload initialization
-socket.on('song:uploadInit', async (data) => {
-  try {
-    const { fileCount, totalSize } = data;
-    
-    // Check if user is authenticated
-    if (!socket.authenticated) {
-      throw new Error('Authentication required');
-    }
-    
-    // Initialize upload
-    const uploadId = uploadManager.initUpload(socket.user.id, fileCount);
-    
-    socket.emit('song:uploadInit', { 
-      success: true, 
-      uploadId
-    });
-  } catch (error) {
-    socket.emit('error', { message: 'Failed to initialize upload', error: error.message });
-  }
+// Configure multer for memory storage
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
-// Handle file upload
-socket.on('song:upload', async (data) => {
-  try {
-    const { uploadId, fileIndex, file, metadata } = data;
-    
-    // Check if user is authenticated
-    if (!socket.authenticated) {
-      throw new Error('Authentication required');
-    }
-    
-    // Get upload state
-    const upload = uploadManager.getStatus(uploadId);
-    if (upload.status === 'not_found') {
-      throw new Error('Upload not found');
-    }
-    
-    // Check if upload was cancelled
-    if (upload.status === 'cancelled') {
-      return socket.emit('song:upload', { 
-        success: false, 
-        cancelled: true,
-        uploadId
-      });
-    }
-    
-    // Update status to processing
-    uploadManager.updateProgress(uploadId, fileIndex, metadata.title, 0);
-    
-    // Process file (in a real implementation, this would be async)
-    // 1. Save file to temporary storage
-    // 2. Convert to MP3 if needed
-    // 3. Strip headers
-    // 4. Save to S3
-    // 5. Create database record
-    
-    // Simulate processing with progress updates
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-      progress += 10;
-      
-      // Check if skipped
-      if (uploadManager.getStatus(uploadId).shouldSkip) {
-        clearInterval(progressInterval);
-        return socket.emit('song:upload', { 
-          success: false, 
-          skipped: true,
-          uploadId,
-          fileIndex
-        });
-      }
-      
-      // Check if cancelled
-      if (uploadManager.getStatus(uploadId).status === 'cancelled') {
-        clearInterval(progressInterval);
-        return socket.emit('song:upload', { 
-          success: false, 
-          cancelled: true,
-          uploadId
-        });
-      }
-      
-      // Update progress
-      uploadManager.updateProgress(uploadId, fileIndex, metadata.title, progress);
-      
-      // Emit progress update
-      socket.emit('song:uploadProgress', {
-        uploadId,
-        fileIndex,
-        progress
-      });
-      
-      // When complete
-      if (progress >= 100) {
-        clearInterval(progressInterval);
-        
-        // Mark file as processed
-        uploadManager.fileProcessed(uploadId);
-        
-        // In a real implementation, we would return the actual song ID
-        socket.emit('song:upload', {
-          success: true,
-          uploadId,
-          fileIndex,
-          songId: generateUniqueId()
-        });
-      }
-    }, 500);
-  } catch (error) {
-    socket.emit('error', { message: 'Failed to upload song', error: error.message });
-  }
+// Profile image upload
+router.post('/profile-image', authenticateToken, upload.single('image'), async (req, res) => {
+    // Permission check, S3 upload, database update
 });
 
-// Handle skip request
-socket.on('song:skipUpload', (data) => {
-  try {
-    const { uploadId } = data;
-    
-    // Skip current file
-    const success = uploadManager.skipFile(uploadId);
-    
-    socket.emit('song:skipUpload', { success });
-  } catch (error) {
-    socket.emit('error', { message: 'Failed to skip upload', error: error.message });
-  }
-});
-
-// Handle cancel request
-socket.on('song:cancelUpload', (data) => {
-  try {
-    const { uploadId } = data;
-    
-    // Cancel upload
-    const success = uploadManager.cancelUpload(uploadId);
-    
-    socket.emit('song:cancelUpload', { success });
-  } catch (error) {
-    socket.emit('error', { message: 'Failed to cancel upload', error: error.message });
-  }
+// Album art upload  
+router.post('/album-art', authenticateToken, upload.single('image'), async (req, res) => {
+    // S3 upload, return URL
 });
 ```
+
+### Upload Service (`services/uploadService.js`)
+
+Key functions:
+- `processFile(file, metadata, userId)` - Process song uploads
+- `uploadImage(file, folder)` - Process image uploads
+- `createSongFromMetadata()` - Create database records
+- `generateSecureUrl()` - Generate pre-signed S3 URLs
+
+### File Processing Pipeline
+
+1. **Hash Generation**: SHA-256 hash for duplicate detection
+2. **S3 Upload**: Files stored with hash-based naming
+3. **Database Records**: Songs, artists, albums created/linked
+4. **Artwork Handling**: Embedded artwork extracted and stored separately
+
+## Client Implementation
+
+### Upload Manager (`client/js/upload.js`)
+
+- File selection and metadata extraction
+- Progress tracking with XHR
+- Error handling and retry logic
+- Batch upload processing
+
+### Progress Tracking
+
+```javascript
+xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+        const progress = (e.loaded / e.total) * 100;
+        onProgress(progress);
+    }
+});
+```
+
+## Security Features
+
+- JWT authentication required for all uploads
+- File size limits (50MB for images, 100MB for songs)
+- Content type validation
+- Hash-based duplicate detection
+- Secure S3 file naming (prevents conflicts)
+
+## Error Handling
+
+- Network error detection and retry logic
+- Duplicate file detection
+- Invalid file format handling
+- Storage quota management
+- Graceful degradation for connection issues
+
+## Storage Structure
+
+```
+S3 Bucket:
+├── songs/           # Audio files (hash-named)
+├── song_art/        # Individual song artwork  
+├── album_art/       # Album artwork
+├── artist_images/   # Artist profile images
+└── profiles/        # User profile pictures
+```
+
+## Performance Optimizations
+
+- Memory-based multer storage for faster processing
+- Pre-signed URL caching (10 minute cache)
+- Batch processing with progress feedback
+- Efficient duplicate detection via hashing

@@ -104,17 +104,13 @@ fi
 echo
 print_header "Storage Configuration:"
 echo "Choose your file storage option:"
-echo "1. AWS S3 (cloud storage)"
-echo "2. Local disk (server storage)"
+echo "1. Local disk (server storage) [default]"
+echo "2. AWS S3 (cloud storage)"
 echo
 read -p "Select storage type (1 or 2): " STORAGE_CHOICE
+STORAGE_CHOICE=${STORAGE_CHOICE:-1}
 
 if [[ "$STORAGE_CHOICE" == "2" ]]; then
-    STORAGE_TYPE="local"
-    read -p "Local storage path (default: ./storage): " LOCAL_STORAGE_PATH
-    LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH:-./storage}
-    print_status "Using local disk storage at: $LOCAL_STORAGE_PATH"
-else
     STORAGE_TYPE="s3"
     echo
     print_header "AWS S3 Configuration:"
@@ -127,6 +123,11 @@ else
     read -p "S3 Bucket Name: " S3_BUCKET_NAME
     read -p "AWS Region (default: us-west-2): " AWS_REGION
     AWS_REGION=${AWS_REGION:-us-west-2}
+else
+    STORAGE_TYPE="local"
+    read -p "Local storage path (default: ./storage): " LOCAL_STORAGE_PATH
+    LOCAL_STORAGE_PATH=${LOCAL_STORAGE_PATH:-./storage}
+    print_status "Using local disk storage at: $LOCAL_STORAGE_PATH"
 fi
 
 echo
