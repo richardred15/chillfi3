@@ -19,7 +19,6 @@ const uploadService = require('./services/uploadService');
 const songService = require('./services/songService');
 const deletionService = require('./services/deletionService');
 const storageService = require('./services/storageService');
-const { extractS3Key } = require('./utils/s3Utils');
 
 // const s3Client = new S3Client({
 //     region: config.aws.region,
