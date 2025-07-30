@@ -89,7 +89,11 @@ function handleSocket(socket, _io) {
                 error: err.message,
                 userId: socket.user?.id,
             });
-            error(socket, "albums:list", "Failed to get albums - albums.js");
+            error(
+                socket,
+                "albums:list",
+                "Failed to get albums - albums.js - " + JSON.stringify(err)
+            );
         }
     });
 
