@@ -85,6 +85,9 @@ function handleSocket(socket, _io) {
 
             socket.emit("albums:list", response);
         } catch (err) {
+            console.error("ALBUMS ERROR:", err);
+            console.error("ALBUMS ERROR MESSAGE:", err.message);
+            console.error("ALBUMS ERROR STACK:", err.stack);
             logger.error("List albums error", {
                 error: err.message,
                 userId: socket.user?.id,
