@@ -155,7 +155,15 @@ EOF
 if [[ -n "$DOMAIN_NAME" ]]; then
     API_URL="https://$DOMAIN_NAME/api"
 else
-    API_URL="http://localhost:3005/api"
+    API_URL="http://localhost/api"
+fi
+
+# Ensure .env.client exists (copy from example if needed)
+if [[ ! -f ".env.client" ]]; then
+    if [[ -f ".env.client.example" ]]; then
+        cp .env.client.example .env.client
+        print_status "Created .env.client from example"
+    fi
 fi
 
 cat > .env.client << EOF
