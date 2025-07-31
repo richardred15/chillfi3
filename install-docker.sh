@@ -30,9 +30,60 @@ print_header() {
 }
 
 # Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   print_error "This script should not be run as root. Please run as a regular user."
-   exit 1
+if [[ $EUID -eq 0 ]] && [[ -z "$CHILLFI_USER_CREATED" ]]; then
+    print_warning "Running as root. Let's create a regular user for the installation."
+    echo
+    
+    # Prompt for new username
+    while true; do
+        read -p "Enter username for new user: " NEW_USERNAME
+        if [[ -n "$NEW_USERNAME" ]] && [[ "$NEW_USERNAME" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+            break
+        else
+            print_error "Invalid username. Use lowercase letters, numbers, hyphens, and underscores only."
+        fi
+    done
+    
+    # Check if user already exists
+    if id "$NEW_USERNAME" &>/dev/null; then
+        print_status "User $NEW_USERNAME already exists"
+    else
+        print_status "Creating user $NEW_USERNAME..."
+        adduser --gecos "ChillFi3 User" "$NEW_USERNAME"
+        
+        if ! id "$NEW_USERNAME" &>/dev/null; then
+            print_error "Failed to create user $NEW_USERNAME"
+            exit 1
+        fi
+    fi
+    
+    # Add user to necessary groups
+    print_status "Adding $NEW_USERNAME to sudo and docker groups..."
+    usermod -aG sudo "$NEW_USERNAME"
+    usermod -aG docker "$NEW_USERNAME" 2>/dev/null || true  # docker group might not exist yet
+    
+    # Get the directory where this script is located
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    USER_HOME="/home/$NEW_USERNAME"
+    TARGET_DIR="$USER_HOME/chillfi3"
+    
+    # Copy the entire project to user's home directory
+    print_status "Copying ChillFi3 to $TARGET_DIR..."
+    if [[ "$SCRIPT_DIR" != "$TARGET_DIR" ]]; then
+        cp -r "$SCRIPT_DIR" "$TARGET_DIR"
+        chown -R "$NEW_USERNAME:$NEW_USERNAME" "$TARGET_DIR"
+    fi
+    
+    # Set environment variable to prevent infinite loop
+    export CHILLFI_USER_CREATED=1
+    
+    print_status "Switching to user $NEW_USERNAME and continuing installation..."
+    echo
+    
+    # Relaunch script as new user
+    cd "$TARGET_DIR"
+    sudo -u "$NEW_USERNAME" -E bash "$TARGET_DIR/install-docker.sh" "$@"
+    exit $?
 fi
 
 print_header "=== ChillFi3 Docker Installation ==="
