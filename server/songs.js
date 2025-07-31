@@ -601,7 +601,7 @@ function handleSocket(socket, _io) {
     // Get recently played songs
     socket.on("song:recentlyPlayed", async (data) => {
         try {
-            const { limit = 10, offset = 0 } = data;
+            const { limit = 10 } = data;
 
             if (!socket.authenticated) {
                 return socket.emit("song:recentlyPlayed", {
@@ -611,55 +611,18 @@ function handleSocket(socket, _io) {
                 });
             }
 
-            // Get paginated songs
-            const songs = await database.query(
-                `
-                SELECT DISTINCT s.*, a.name as artist, al.title as album, 
-                       COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url
-                FROM song_listens sl
-                JOIN songs s ON sl.song_id = s.id
-                LEFT JOIN artists a ON s.artist_id = a.id
-                LEFT JOIN albums al ON s.album_id = al.id
-                WHERE sl.user_id = ?
-                ORDER BY sl.listened_at DESC
-                LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-            `,
-                [socket.user.id]
-            );
-
-            // Generate URLs for songs
-            for (const song of songs) {
-                if (song.cover_art_url) {
-                    song.cover_art_url = await storageService.generateUrl(
-                        song.cover_art_url
-                    );
-                }
-                // Pre-generate play URL for faster playback
-                if (song.file_path) {
-                    song.play_url = await storageService.generateUrl(
-                        song.file_path
-                    );
-                }
-            }
-
-            // Get total count
-            const [totalResult] = await database.query(
-                `
-                SELECT COUNT(DISTINCT s.id) as count
-                FROM song_listens sl
-                JOIN songs s ON sl.song_id = s.id
-                WHERE sl.user_id = ?
-            `,
-                [socket.user.id]
-            );
+            const songs = await songService.getRecentlyPlayed(socket.user.id, limit);
 
             socket.emit("song:recentlyPlayed", {
                 success: true,
                 songs,
-                total: totalResult.count,
+                total: songs.length,
             });
         } catch (error) {
-            console.error("Failed to get recently played:", error);
+            logger.error("Failed to get recently played", {
+                error: error.message,
+                userId: socket.user?.id,
+            });
             socket.emit("song:recentlyPlayed", {
                 success: false,
                 message: "Failed to get recently played songs",

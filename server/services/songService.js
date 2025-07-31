@@ -318,20 +318,34 @@ async function getListenStats(songId) {
 }
 
 async function getRecentlyPlayed(userId, limit = 10) {
-    return await database.query(
+    const songs = await database.query(
         `
-        SELECT DISTINCT s.*, a.name as artist, al.title as album, 
-               COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url
+        SELECT s.*, a.name as artist, al.title as album, 
+               COALESCE(s.cover_art_url, al.cover_art_url) as cover_art_url,
+               MAX(sl.listened_at) as last_played
         FROM song_listens sl
         JOIN songs s ON sl.song_id = s.id
         LEFT JOIN artists a ON s.artist_id = a.id
         LEFT JOIN albums al ON s.album_id = al.id
         WHERE sl.user_id = ?
-        ORDER BY sl.listened_at DESC
+        GROUP BY s.id
+        ORDER BY last_played DESC
         LIMIT ${parseInt(limit)}
     `,
         [userId]
     );
+
+    // Generate URLs for songs
+    for (const song of songs) {
+        if (song.cover_art_url) {
+            song.cover_art_url = await storageService.generateUrl(song.cover_art_url);
+        }
+        if (song.file_path) {
+            song.play_url = await storageService.generateUrl(song.file_path);
+        }
+    }
+
+    return songs;
 }
 
 module.exports = {
