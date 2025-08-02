@@ -300,6 +300,11 @@
         {
           "name": "idx_songs_genre",
           "columns": ["genre"]
+        },
+        {
+          "name": "idx_songs_file_path",
+          "columns": ["file_path"],
+          "unique": true
         }
       ]
     },

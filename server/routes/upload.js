@@ -12,7 +12,10 @@ const router = express.Router();
 // Configure multer for memory storage
 const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    limits: { 
+        fileSize: 50 * 1024 * 1024,    // 50MB file limit
+        fieldSize: 10 * 1024 * 1024    // 10MB field limit (for base64 artwork)
+    },
     fileFilter: (req, file, cb) => {
         logger.info('Upload file filter', {
             originalname: file.originalname,
@@ -157,7 +160,8 @@ router.post('/songs', authenticateToken, upload.array('files'), async (req, res)
         userId: req.user.id,
         fileCount: req.files?.length || 0,
         totalSize: req.files?.reduce((sum, f) => sum + f.size, 0) || 0,
-        hasMetadata: !!req.body.metadata
+        hasMetadata: !!req.body.metadata,
+        files: req.files?.map(f => ({ name: f.originalname, size: f.size })) || []
     });
     
     try {
@@ -212,6 +216,14 @@ router.post('/songs', authenticateToken, upload.array('files'), async (req, res)
             });
 
             try {
+                logger.info('About to process file', {
+                    requestId: fileRequestId,
+                    userId: req.user.id,
+                    filename: file.originalname,
+                    size: file.size,
+                    metadata: fileMeta
+                });
+                
                 const songId = await uploadService.processFile(file, fileMeta, req.user.id);
                 
                 logger.info('File upload successful', {

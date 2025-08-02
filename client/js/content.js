@@ -10,6 +10,9 @@ class ContentManager {
         this.api = api;
         this.toast = toast;
         this.currentSongs = [];
+        this.cachedAlbums = [];
+        this.cachedRecentlyPlayed = [];
+        this.dataLoaded = false;
 
         // Constants
         this.HOME_SECTION_ITEM_COUNT = 10;
@@ -34,6 +37,7 @@ class ContentManager {
             
             await this.loadAllSongs();
             this.renderHomeSections();
+            this.dataLoaded = true;
             this.setupSearch();
             this.setupSeeAllHandlers();
         } catch (error) {
@@ -82,8 +86,19 @@ class ContentManager {
     // Render home sections using loaded data
     renderHomeSections() {
         this.renderSongList(this.currentSongs);
-        this.loadAlbums(); // Load albums from API
-        this.loadRecentlyPlayed(); // Only this needs API call
+        
+        // Only load if not already cached
+        if (this.cachedAlbums.length === 0) {
+            this.loadAlbums();
+        } else {
+            this.renderAlbumGrid(this.cachedAlbums);
+        }
+        
+        if (this.cachedRecentlyPlayed.length === 0) {
+            this.loadRecentlyPlayed();
+        } else {
+            this.renderRecentlyPlayedGrid(this.cachedRecentlyPlayed);
+        }
     }
 
     // Load recently played songs (only API call needed)
@@ -93,6 +108,7 @@ class ContentManager {
                 this.HOME_SECTION_ITEM_COUNT
             );
             const songs = response.data?.items || response.songs || [];
+            this.cachedRecentlyPlayed = songs;
             this.renderRecentlyPlayedGrid(songs);
         } catch (error) {
             console.error("Failed to load recently played:", error);
@@ -159,6 +175,7 @@ class ContentManager {
                 this.HOME_SECTION_ITEM_COUNT
             );
             const albums = response.data?.items || response.albums || [];
+            this.cachedAlbums = albums;
             this.renderAlbumGrid(albums);
         } catch (error) {
             console.error("Failed to load albums:", error);
@@ -976,8 +993,10 @@ class ContentManager {
         ];
         this.showSection(null, homeSectionIds);
 
-        // Reload all home content
-        this.renderHomeSections();
+        // Only render if data is already loaded, otherwise init() will handle it
+        if (this.dataLoaded) {
+            this.renderHomeSections();
+        }
 
         // Restore active class to home nav item
         const navItems = document.querySelectorAll(".nav-item");

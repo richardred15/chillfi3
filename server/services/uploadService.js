@@ -176,8 +176,8 @@ async function processFile(file, metadata, userId) {
         });
         
         const existing = await database.query(
-            'SELECT id, title FROM songs WHERE file_path LIKE ?',
-            [`%${fileHash}%`]
+            'SELECT id, title FROM songs WHERE file_path = ?',
+            [fileName]
         );
 
         if (existing.length > 0) {

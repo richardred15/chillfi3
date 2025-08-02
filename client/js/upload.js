@@ -115,6 +115,7 @@ class UploadManager {
             newDropzone.addEventListener("drop", async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 newDropzone.classList.remove("dragover");
                 const allFiles = await window.getAllFilesFromDrop(
                     e.dataTransfer

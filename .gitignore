@@ -69,6 +69,7 @@ secrets/*.txt
 # Development/analysis files
 .analysis/
 .amazonq/
+.continue/
 old_index.html
 rules.md
 sample.md
